@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/spacemeshos/smcli/config"
+	"github.com/spacemeshos/smcli/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -42,7 +42,7 @@ func init() {
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
+	// will be common for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.smcli.yaml)")
 
@@ -59,7 +59,7 @@ func initConfig() {
 	} else {
 
 		// Search config in home directory with name ".smcli" (without extension).
-		viper.AddConfigPath(config.DefaultConfigPath())
+		viper.AddConfigPath(common.DefaultConfigPath())
 		viper.SetConfigType("yaml")
 		viper.SetConfigName("config")
 	}

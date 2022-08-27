@@ -10,8 +10,8 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/spacemeshos/smcli/config"
-	"github.com/spacemeshos/smcli/resources"
+	"github.com/spacemeshos/smcli/common"
+	"github.com/spacemeshos/smcli/util"
 	"github.com/spf13/cobra"
 )
 
@@ -28,22 +28,22 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("start called")
 		fmt.Println("Download Started")
-		fileUrl := config.NodeDownloadUrl()
+		fileUrl := common.NodeDownloadUrl()
 		zipFileName := "node.zip"
-		if err := resources.DownloadFile(zipFileName, fileUrl); err != nil {
+		if err := util.DownloadFile(zipFileName, fileUrl); err != nil {
 			panic(err)
 		}
 		fmt.Println("Download Finished")
 		fmt.Println("Unpacking...")
 		fmt.Println("Creating directory...")
-		binPath := filepath.Join(config.DefaultConfigPath(), "bin")
+		binPath := filepath.Join(common.DefaultConfigPath(), "bin")
 		fmt.Printf("Creating directory... %s", binPath)
 		if err := os.MkdirAll(binPath, 0755); err != nil {
 			cobra.CheckErr(err)
 		}
 		fmt.Println("Creating directory...")
 
-		if err := resources.Unzip(zipFileName, binPath); err != nil {
+		if err := util.Unzip(zipFileName, binPath); err != nil {
 			cobra.CheckErr(err)
 		}
 		fmt.Println("Done")

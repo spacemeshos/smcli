@@ -1,4 +1,4 @@
-package config
+package common
 
 import (
 	"fmt"
@@ -15,7 +15,6 @@ const (
 )
 
 func DefaultConfigPath() string {
-	// Find home directory.
 	home, err := os.UserHomeDir()
 	cobra.CheckErr(err)
 	return path.Join(home, ".spacemesh")
