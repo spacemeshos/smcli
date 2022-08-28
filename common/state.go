@@ -59,7 +59,7 @@ func unintializedState() state {
 	}
 }
 
-func (sp *StateProvider) CheckIfNodeRunning() bool {
+func (sp *StateProvider) NodeIsRunning() bool {
 	sp.mu.Lock()
 	defer sp.mu.Unlock()
 	sp.loadStateFromFileLocked()

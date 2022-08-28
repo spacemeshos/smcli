@@ -28,28 +28,29 @@ to quickly create a Cobra application.`,
 
 		// Check if node is running according to state file
 		sp := common.NewStateProvider()
-		if running := sp.CheckIfNodeRunning(); running {
+		if running := sp.NodeIsRunning(); running {
 			fmt.Println("Node is already running with pid:", sp.GetNodePid())
 			return
 		}
+		// Check if node bin file exists
+		if _, err := os.Stat(common.NodeBin()); os.IsNotExist(err) {
+			fmt.Println("Download Started")
+			fileUrl := common.NodeDownloadUrl()
+			zipFileName := "node.zip"
+			if err := util.DownloadFile(zipFileName, fileUrl); err != nil {
+				panic(err)
+			}
+			fmt.Println("Download Finished")
+			fmt.Println("Unpacking...")
+			fmt.Printf("Creating directory %s", common.BinDirectory())
 
-		fmt.Println("start called")
-		fmt.Println("Download Started")
-		fileUrl := common.NodeDownloadUrl()
-		zipFileName := "node.zip"
-		if err := util.DownloadFile(zipFileName, fileUrl); err != nil {
-			panic(err)
+			err := util.Unzip(zipFileName, common.BinDirectory())
+			cobra.CheckErr(err)
+			err = os.Remove(zipFileName)
+			cobra.CheckErr(err)
+
+			fmt.Println("\nDone")
 		}
-		fmt.Println("Download Finished")
-		fmt.Println("Unpacking...")
-		fmt.Printf("Creating directory %s", common.BinDirectory())
-
-		err := util.Unzip(zipFileName, common.BinDirectory())
-		cobra.CheckErr(err)
-		err = os.Remove(zipFileName)
-		cobra.CheckErr(err)
-
-		fmt.Println("\nDone")
 
 		fmt.Println("Starting Node...")
 
