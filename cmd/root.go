@@ -59,9 +59,9 @@ func initConfig() {
 	} else {
 
 		// Search config in home directory with name ".smcli" (without extension).
-		viper.AddConfigPath(common.DefaultConfigPath())
-		viper.SetConfigType("yaml")
-		viper.SetConfigName("config")
+		viper.AddConfigPath(common.DotDirectory())
+		viper.SetConfigType(common.ConfigFileType())
+		viper.SetConfigName(common.ConfigFileName())
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match

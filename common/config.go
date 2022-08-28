@@ -1,10 +1,9 @@
 package common
 
 import (
-	"fmt"
 	"os"
 	"path"
-	"runtime"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 )
@@ -22,18 +21,7 @@ func DefaultConfigPath() string {
 
 func NodeDownloadUrl() string {
 	baseDownloadPath := "storage.googleapis.com/go-spacemesh-release-builds/" + DefaultNodeVersion
-	downloadPath := ""
-	os := runtime.GOOS
-	switch os {
-	case "windows":
-		downloadPath = path.Join(baseDownloadPath, "Windows.zip")
-	case "darwin":
-		downloadPath = path.Join(baseDownloadPath, "macOS.zip")
-	case "linux":
-		downloadPath = path.Join(baseDownloadPath, "Linux.zip")
-	default:
-		panic(fmt.Sprintf("unsupported os: %s", os))
-	}
+	downloadPath := filepath.Join(baseDownloadPath, SystemType()+".zip")
 
 	return "https://" + downloadPath
 }

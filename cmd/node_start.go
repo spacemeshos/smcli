@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
-	"path/filepath"
 
 	"github.com/spacemeshos/smcli/common"
 	"github.com/spacemeshos/smcli/util"
@@ -26,6 +24,15 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		common.InitDotDir()
+
+		// Check if node is running according to state file
+		sp := common.NewStateProvider()
+		if running := sp.CheckIfNodeRunning(); running {
+			fmt.Println("Node is already running with pid:", sp.GetNodePid())
+			return
+		}
+
 		fmt.Println("start called")
 		fmt.Println("Download Started")
 		fileUrl := common.NodeDownloadUrl()
@@ -35,32 +42,33 @@ to quickly create a Cobra application.`,
 		}
 		fmt.Println("Download Finished")
 		fmt.Println("Unpacking...")
-		fmt.Println("Creating directory...")
-		binPath := filepath.Join(common.DefaultConfigPath(), "bin")
-		fmt.Printf("Creating directory... %s", binPath)
-		if err := os.MkdirAll(binPath, 0755); err != nil {
-			cobra.CheckErr(err)
-		}
-		fmt.Println("Creating directory...")
+		fmt.Printf("Creating directory %s", common.BinDirectory())
 
-		if err := util.Unzip(zipFileName, binPath); err != nil {
-			cobra.CheckErr(err)
-		}
-		fmt.Println("Done")
+		err := util.Unzip(zipFileName, common.BinDirectory())
+		cobra.CheckErr(err)
+		err = os.Remove(zipFileName)
+		cobra.CheckErr(err)
+
+		fmt.Println("\nDone")
 
 		fmt.Println("Starting Node...")
-		nodePath := path.Join(binPath, "Linux", "go-spacemesh")
+
+		nodePath := common.NodeBin()
 
 		nodeProc := exec.Command(nodePath,
-			"--listen", "/ip4/0.0.0.0/tcp/7513",
-			"--config", filepath.Join(binPath, "Linux", "config.json"))
-		nodeProc.Stdout = os.Stdout
-		err := nodeProc.Start()
+			"--listen", "/ip4/0.0.0.0/tcp/7513", // TODO(jonZlotnik): passthrough port flag
+			"--config", common.NodeConfigFile(),
+			"--data-folder", common.NodeDataDirectory())
+		nodeLogFile, err := common.OpenNodeLogFile()
+		cobra.CheckErr(err)
 
-		if err != nil {
-			cobra.CheckErr(err)
-		}
-		fmt.Printf("Just ran subprocess %d, exiting\n", nodeProc.Process.Pid)
+		nodeProc.Stdout = nodeLogFile
+		nodeProc.Stderr = nodeLogFile
+
+		err = nodeProc.Start()
+		cobra.CheckErr(err)
+		sp.UpdateNodePid(nodeProc.Process.Pid)
+		fmt.Printf("Just launched %d, exiting\n", nodeProc.Process.Pid)
 	},
 }
 
