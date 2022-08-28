@@ -96,5 +96,5 @@ func InitDotDir() {
 // OpenNodeLogFile creates the go-spacemesh.log file if it doesn't exist and
 // returns the file pointer. If it exists, it returns the file pointer.
 func OpenNodeLogFile() (*os.File, error) {
-	return os.OpenFile(LogFile(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0770)
+	return os.OpenFile(LogFile(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0660)
 }

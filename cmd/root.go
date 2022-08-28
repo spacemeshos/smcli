@@ -23,9 +23,9 @@ var rootCmd = &cobra.Command{
 The sm CLI provides an ergonomic set of tools for managing a node and wallet.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Hello world!")
-	},
+	// Run: func(cmd *cobra.Command, args []string) {
+	// 	fmt.Println("Hello world!")
+	// },
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
