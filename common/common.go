@@ -55,7 +55,7 @@ func NodeBin() string {
 	return filepath.Join(BinDirectoryWithSysType(), "go-spacemesh")
 }
 func NodeConfigFile() string {
-	return filepath.Join(BinDirectory(), "config.json")
+	return filepath.Join(BinDirectoryWithSysType(), "config.toml")
 }
 func NodeDataDirectory() string {
 	return filepath.Join(DotDirectory(), "data")
