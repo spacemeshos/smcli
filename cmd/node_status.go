@@ -7,7 +7,9 @@ package cmd
 import (
 	"fmt"
 
+	smapi "github.com/spacemeshos/api/release/go/spacemesh/v1"
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
 )
 
 // statusCmd represents the status command
@@ -21,7 +23,19 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("status called")
+		cc, _ := grpc.Dial("localhost:9092", grpc.WithInsecure())
+		defer cc.Close()
+		client := smapi.NewNodeServiceClient(cc)
+
+		statusResp, err := client.Status(cmd.Context(), &smapi.StatusRequest{})
+		cobra.CheckErr(err)
+		fmt.Printf("Synced: %v\nPeers: %d\nSyncedLayer: %d\nTopLayer: %d\nVerifiedLayer: %d\n",
+			statusResp.Status.IsSynced,
+			statusResp.Status.ConnectedPeers,
+			statusResp.Status.SyncedLayer.GetNumber(),
+			statusResp.Status.TopLayer.GetNumber(),
+			statusResp.Status.VerifiedLayer.GetNumber(),
+		)
 	},
 }
 
