@@ -22,8 +22,6 @@ the latest version of go-spacemesh if not already installed.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		common.InitDotDir()
 
-		fmt.Println("Starting node...")
-
 		// Check if node is running according to state file
 		sp := common.NewStateProvider()
 		if running := sp.NodeIsRunning(); running {
@@ -41,7 +39,6 @@ the latest version of go-spacemesh if not already installed.`,
 			}
 			fmt.Println("Download Finished")
 			fmt.Println("Unpacking...")
-			fmt.Printf("Creating directory %s", common.BinDirectory())
 
 			err := util.Unzip(zipFileName, common.BinDirectory())
 			cobra.CheckErr(err)
@@ -49,6 +46,12 @@ the latest version of go-spacemesh if not already installed.`,
 			cobra.CheckErr(err)
 
 			fmt.Println("\nDone")
+		}
+
+		// Check if node config is there
+		if _, err := os.Stat(common.NodeConfigFile()); os.IsNotExist(err) {
+			fmt.Println("Node config not found. Downloading default config.")
+			common.InitNodeConfig(common.NodeConfigFile())
 		}
 
 		fmt.Println("Starting Node...")
@@ -59,6 +62,7 @@ the latest version of go-spacemesh if not already installed.`,
 			"--listen", "/ip4/0.0.0.0/tcp/7513", // TODO(jonZlotnik): passthrough port flag
 			"--config", common.NodeConfigFile(),
 			"--data-folder", common.NodeDataDirectory(),
+			"--smeshing-opts-datadir", common.NodeDataDirectory(),
 			"--grpc", "node",
 			"--grpc-port", "9092",
 		)
@@ -71,7 +75,7 @@ the latest version of go-spacemesh if not already installed.`,
 		err = nodeProc.Start()
 		cobra.CheckErr(err)
 		sp.UpdateNodePid(nodeProc.Process.Pid)
-		fmt.Printf("Just launched %d, exiting\n", nodeProc.Process.Pid)
+		fmt.Printf("Launched with PID: %d\n", nodeProc.Process.Pid)
 	},
 }
 

@@ -1,10 +1,14 @@
 package common
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/spacemeshos/smcli/util"
 
 	"github.com/spf13/cobra"
 )
@@ -48,7 +52,6 @@ func SystemType() string {
 // │       └── config.json
 // ├── logs
 // │   └── go-spacemesh.log
-// ├── networks.json
 // ├── config.yaml
 // └── state.json
 
@@ -87,9 +90,6 @@ func ConfigFile() string {
 func StateFile() string {
 	return filepath.Join(DotDirectory(), "state.json")
 }
-func NetworksFile() string {
-	return filepath.Join(DotDirectory(), "networks.json")
-}
 func LogDirectory() string {
 	return filepath.Join(DotDirectory(), "logs")
 }
@@ -108,4 +108,38 @@ func InitDotDir() {
 // returns the file pointer. If it exists, it returns the file pointer.
 func OpenNodeLogFile() (*os.File, error) {
 	return os.OpenFile(LogFile(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0660)
+}
+
+func InitNodeConfig(filePath string) {
+
+	type NetworkDiscoveryResp []struct {
+		NetName              string `json:"netName"`
+		NetID                int    `json:"netID"`
+		Conf                 string `json:"conf"`
+		GrpcAPI              string `json:"grpcAPI"`
+		JSONAPI              string `json:"jsonAPI"`
+		Explorer             string `json:"explorer"`
+		ExplorerAPI          string `json:"explorerAPI"`
+		ExplorerVersion      string `json:"explorerVersion"`
+		ExplorerConf         string `json:"explorerConf"`
+		Dash                 string `json:"dash"`
+		DashAPI              string `json:"dashAPI"`
+		DashVersion          string `json:"dashVersion"`
+		Repository           string `json:"repository"`
+		MinNodeVersion       string `json:"minNodeVersion"`
+		MaxNodeVersion       string `json:"maxNodeVersion"`
+		MinSmappRelease      string `json:"minSmappRelease"`
+		LatestSmappRelease   string `json:"latestSmappRelease"`
+		SmappBaseDownloadURL string `json:"smappBaseDownloadUrl"`
+		NodeBaseDownloadURL  string `json:"nodeBaseDownloadUrl"`
+	}
+	netDiscoveryResp := NetworkDiscoveryResp{}
+	resp, err := http.Get(NetworkDiscoveryUrl)
+	cobra.CheckErr(err)
+	err = json.NewDecoder(resp.Body).Decode(&netDiscoveryResp)
+	cobra.CheckErr(err)
+
+	confUrl := netDiscoveryResp[0].Conf
+	err = util.DownloadFile(filePath, confUrl)
+	cobra.CheckErr(err)
 }
