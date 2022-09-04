@@ -5,7 +5,21 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/spf13/cobra"
 )
+
+const (
+	DefaultNodeVersion  = "v0.2.16-beta.0"
+	DefaultDiscoveryUrl = "https://discover.spacemesh.io/networks.json"
+)
+
+func NodeDownloadUrl() string {
+	baseDownloadPath := "storage.googleapis.com/go-spacemesh-release-builds/" + DefaultNodeVersion
+	downloadPath := filepath.Join(baseDownloadPath, SystemType()+".zip")
+
+	return "https://" + downloadPath
+}
 
 const (
 	Windows = "Windows"
@@ -55,7 +69,7 @@ func NodeBin() string {
 	return filepath.Join(BinDirectoryWithSysType(), "go-spacemesh")
 }
 func NodeConfigFile() string {
-	return filepath.Join(BinDirectory(), "config.json")
+	return filepath.Join(BinDirectoryWithSysType(), "config.toml")
 }
 func NodeDataDirectory() string {
 	return filepath.Join(DotDirectory(), "data")
@@ -86,11 +100,8 @@ func LogFile() string {
 // InitDotDir creates the .spacemesh directory
 // and subdirectories if they doesn't exist.
 func InitDotDir() {
-	if _, err := os.Stat(DotDirectory()); os.IsNotExist(err) {
-		os.Mkdir(DotDirectory(), 0770)
-		os.Mkdir(BinDirectory(), 0770)
-		os.Mkdir(LogDirectory(), 0770)
-	}
+	cobra.CheckErr(os.MkdirAll(BinDirectory(), 0770))
+	cobra.CheckErr(os.MkdirAll(LogDirectory(), 0770))
 }
 
 // OpenNodeLogFile creates the go-spacemesh.log file if it doesn't exist and

@@ -22,12 +22,15 @@ the latest version of go-spacemesh if not already installed.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		common.InitDotDir()
 
+		fmt.Println("Starting node...")
+
 		// Check if node is running according to state file
 		sp := common.NewStateProvider()
 		if running := sp.NodeIsRunning(); running {
 			fmt.Println("Node is already running with pid:", sp.GetNodePid())
 			return
 		}
+		fmt.Println("Checking if binary exists...")
 		// Check if node bin file exists
 		if _, err := os.Stat(common.NodeBin()); os.IsNotExist(err) {
 			fmt.Println("Download Started")
@@ -55,7 +58,10 @@ the latest version of go-spacemesh if not already installed.`,
 		nodeProc := exec.Command(nodePath,
 			"--listen", "/ip4/0.0.0.0/tcp/7513", // TODO(jonZlotnik): passthrough port flag
 			"--config", common.NodeConfigFile(),
-			"--data-folder", common.NodeDataDirectory())
+			"--data-folder", common.NodeDataDirectory(),
+			"--grpc", "node",
+			"--grpc-port", "9092",
+		)
 		nodeLogFile, err := common.OpenNodeLogFile()
 		cobra.CheckErr(err)
 
