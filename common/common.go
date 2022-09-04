@@ -8,6 +8,18 @@ import (
 )
 
 const (
+	DefaultNodeVersion  = "v0.2.16-beta.0"
+	DefaultDiscoveryUrl = "https://discover.spacemesh.io/networks.json"
+)
+
+func NodeDownloadUrl() string {
+	baseDownloadPath := "storage.googleapis.com/go-spacemesh-release-builds/" + DefaultNodeVersion
+	downloadPath := filepath.Join(baseDownloadPath, SystemType()+".zip")
+
+	return "https://" + downloadPath
+}
+
+const (
 	Windows = "Windows"
 	MacOS   = "macOS"
 	Linux   = "Linux"

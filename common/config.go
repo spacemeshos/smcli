@@ -1,27 +1,11 @@
 package common
 
-import (
-	"os"
-	"path"
-	"path/filepath"
+import "github.com/spf13/viper"
 
-	"github.com/spf13/cobra"
-)
-
-const (
-	DefaultNodeVersion  = "v0.2.16-beta.0"
-	DefaultDiscoveryUrl = "https://discover.spacemesh.io/networks.json"
-)
-
-func DefaultConfigPath() string {
-	home, err := os.UserHomeDir()
-	cobra.CheckErr(err)
-	return path.Join(home, ".spacemesh")
+func InitDefaultConfig() {
+	viper.SetDefault("grpc_server_addr", "localhost:9092")
 }
 
-func NodeDownloadUrl() string {
-	baseDownloadPath := "storage.googleapis.com/go-spacemesh-release-builds/" + DefaultNodeVersion
-	downloadPath := filepath.Join(baseDownloadPath, SystemType()+".zip")
-
-	return "https://" + downloadPath
+func GetGRPCServerAddr() string {
+	return viper.GetString("grpc_server_addr")
 }

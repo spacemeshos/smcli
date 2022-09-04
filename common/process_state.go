@@ -14,7 +14,7 @@ var stateSingletonOnce sync.Once
 func NewStateProvider() *StateProvider {
 	stateSingletonOnce.Do(func() {
 		stateSingleton = StateProvider{
-			latestState: unintializedState(),
+			latestState: defaultState(),
 			mu:          &sync.Mutex{},
 		}
 		stateSingleton.loadStateFromFileLocked()
@@ -31,7 +31,7 @@ type StateProvider struct {
 func (sp *StateProvider) loadStateFromFileLocked() {
 	// if state file doesn't exists, create a new one.
 	if _, err := os.Stat(StateFile()); os.IsNotExist(err) {
-		sp.latestState = unintializedState()
+		sp.latestState = defaultState()
 		sp.saveStateToFileLocked()
 		return
 	}
@@ -49,13 +49,15 @@ func (sp *StateProvider) saveStateToFileLocked() {
 	cobra.CheckErr(err)
 }
 
+// state persists the last known state of the node.
 type state struct {
 	Pid int `json:"pid"`
 }
 
-func unintializedState() state {
+func defaultState() state {
 	return state{
-		Pid: -1, // PID is -1 when the node is not running.
+		// Process
+		Pid: -1,
 	}
 }
 
