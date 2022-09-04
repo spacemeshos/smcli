@@ -11,7 +11,7 @@ import (
 
 const (
 	DefaultNodeVersion  = "v0.2.16-beta.0"
-	DefaultDiscoveryUrl = "https://discover.spacemesh.io/networks.json"
+	NetworkDiscoveryUrl = "https://discover.spacemesh.io/networks.json"
 )
 
 func NodeDownloadUrl() string {
@@ -69,7 +69,7 @@ func NodeBin() string {
 	return filepath.Join(BinDirectoryWithSysType(), "go-spacemesh")
 }
 func NodeConfigFile() string {
-	return filepath.Join(BinDirectoryWithSysType(), "config.toml")
+	return filepath.Join(BinDirectoryWithSysType(), "config.json")
 }
 func NodeDataDirectory() string {
 	return filepath.Join(DotDirectory(), "data")

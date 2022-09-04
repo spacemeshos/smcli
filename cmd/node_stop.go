@@ -19,15 +19,13 @@ var stopCmd = &cobra.Command{
 	Short: "Stop a running node.",
 	Long:  `Stop a running node.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		common.InitDefaultConfig()
 		common.InitDotDir()
 		sp := common.NewStateProvider()
 		if running := sp.NodeIsRunning(); !running {
 			fmt.Println("Node is not running")
 			return
 		}
-
-		common.InitDefaultConfig()
-		fmt.Println(common.GetGRPCServerAddr())
 
 		cc, _ := grpc.Dial(common.GetGRPCServerAddr(), grpc.WithInsecure())
 		defer cc.Close()

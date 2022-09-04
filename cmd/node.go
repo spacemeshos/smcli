@@ -4,8 +4,6 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -14,9 +12,9 @@ var nodeCmd = &cobra.Command{
 	Use:   "node",
 	Short: "Manage a node.",
 	Long:  `Manage a spacemesh node.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("node called")
-	},
+	// Run: func(cmd *cobra.Command, args []string) {
+	// 	fmt.Println("node called")
+	// },
 }
 
 func init() {
