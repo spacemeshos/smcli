@@ -5,11 +5,12 @@ package cmd
 
 import (
 	"fmt"
-	"syscall"
+	"time"
 
-	"github.com/shirou/gopsutil/v3/process"
+	smapi "github.com/spacemeshos/api/release/go/spacemesh/v1"
 	"github.com/spacemeshos/smcli/common"
 	"github.com/spf13/cobra"
+	"google.golang.org/grpc"
 )
 
 // stopCmd represents the stop command
@@ -24,15 +25,35 @@ var stopCmd = &cobra.Command{
 			fmt.Println("Node is not running")
 			return
 		}
-		// TODO(jonZlotnik): add more thorough checks for node state
-		// like ps -a | grep go-spacemesh
-		pid := sp.GetNodePid()
-		fmt.Println("Stopping Node with pid:", pid)
-		sp.UpdateNodePid(-1)
-		p, err := process.NewProcess(int32(pid))
+
+		common.InitDefaultConfig()
+		fmt.Println(common.GetGRPCServerAddr())
+
+		cc, _ := grpc.Dial(common.GetGRPCServerAddr(), grpc.WithInsecure())
+		defer cc.Close()
+		client := smapi.NewNodeServiceClient(cc)
+
+		resp, err := client.Shutdown(cmd.Context(), &smapi.ShutdownRequest{})
 		cobra.CheckErr(err)
-		err = p.SendSignal(syscall.SIGINT)
-		cobra.CheckErr(err)
+
+		fmt.Printf("%v: %v", resp.Status.Code, resp.Status.Message)
+
+		for {
+			time.Sleep(500 * time.Millisecond)
+			if running := sp.NodeIsRunning(); !running {
+				break
+			}
+		}
+		fmt.Printf("Node stopped")
+		// // TODO(jonZlotnik): add more thorough checks for node state
+		// // like ps -a | grep go-spacemesh
+		// pid := sp.GetNodePid()
+		// fmt.Println("Stopping Node with pid:", pid)
+		// sp.UpdateNodePid(-1)
+		// p, err := process.NewProcess(int32(pid))
+		// cobra.CheckErr(err)
+		// err = p.SendSignal(syscall.SIGINT)
+		// cobra.CheckErr(err)
 
 	},
 }

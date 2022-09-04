@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	smapi "github.com/spacemeshos/api/release/go/spacemesh/v1"
+	"github.com/spacemeshos/smcli/common"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 )
@@ -23,7 +24,7 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		cc, _ := grpc.Dial("localhost:9092", grpc.WithInsecure())
+		cc, _ := grpc.Dial(common.GetGRPCServerAddr(), grpc.WithInsecure())
 		defer cc.Close()
 		client := smapi.NewNodeServiceClient(cc)
 

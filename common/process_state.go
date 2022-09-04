@@ -5,6 +5,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/shirou/gopsutil/process"
 	"github.com/spf13/cobra"
 )
 
@@ -63,9 +64,23 @@ func defaultState() state {
 
 func (sp *StateProvider) NodeIsRunning() bool {
 	sp.mu.Lock()
-	defer sp.mu.Unlock()
+	sp.mu.Unlock()
 	sp.loadStateFromFileLocked()
-	return sp.latestState.Pid != -1
+	if sp.latestState.Pid == -1 {
+		return false
+	}
+	_, err := process.NewProcess(int32(sp.latestState.Pid))
+	if err != nil {
+		switch err {
+		case process.ErrorProcessNotRunning:
+			sp.latestState.Pid = -1
+			sp.saveStateToFileLocked()
+			return false
+		default:
+			cobra.CheckErr(err)
+		}
+	}
+	return true
 }
 
 func (sp *StateProvider) GetNodePid() int {
