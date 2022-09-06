@@ -7,11 +7,10 @@ import (
 	"os"
 
 	"github.com/hashicorp/go-secure-stdlib/password"
+	"github.com/spacemeshos/smcli/common"
 	"github.com/spacemeshos/smcli/wallet"
 	"github.com/spf13/cobra"
 )
-
-var walletPath string
 
 // createCmd represents the create command
 var createCmd = &cobra.Command{
@@ -31,11 +30,10 @@ to quickly create a Cobra application.`,
 		)
 		ws := wallet.NewWalletStore(wk)
 		w := wallet.NewWallet()
-		cobra.CheckErr(ws.Export(walletPath, w))
+		cobra.CheckErr(ws.Export(common.WalletFile(), w))
 	},
 }
 
 func init() {
 	walletCmd.AddCommand(createCmd)
-	createCmd.Flags().StringVarP(&walletPath, "output", "o", "", "Wallet location (full path)")
 }

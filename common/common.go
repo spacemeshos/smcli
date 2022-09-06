@@ -90,6 +90,9 @@ func ConfigFile() string {
 func StateFile() string {
 	return filepath.Join(DotDirectory(), "state.json")
 }
+func WalletFile() string {
+	return filepath.Join(DotDirectory(), "wallet.json")
+}
 func LogDirectory() string {
 	return filepath.Join(DotDirectory(), "logs")
 }
