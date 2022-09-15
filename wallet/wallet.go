@@ -1,8 +1,10 @@
 package wallet
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/sha512"
+	"encoding/gob"
 	"encoding/json"
 	"os"
 
@@ -47,6 +49,9 @@ func WithPassword(password string) WalletKeyOpt {
 func (k *WalletKey) encrypt([]byte) []byte {
 	panic("implement me")
 }
+func (k *WalletKey) decrypt([]byte) []byte {
+	panic("implement me")
+}
 
 type WalletOpener interface {
 	Open(path string) (*Wallet, error)
@@ -66,16 +71,28 @@ type WalletStore struct {
 	wk WalletKey
 }
 
-func NewWalletStore(wk *WalletKey, opts ...WalletStoreOpt) *WalletStore {
+func NewWalletStore(wk *WalletKey) *WalletStore {
 	return &WalletStore{
 		wk: *wk,
 	}
 }
 
-type WalletStoreOpt func(*WalletStore)
-
-func (s *WalletStore) Open(path string, w *Wallet) error {
-	panic("implement me")
+func (s *WalletStore) Open(path string) (w *Wallet, err error) {
+	jsonWallet, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	ew := &ExportableWallet{}
+	if err = json.Unmarshal(jsonWallet, ew); err != nil {
+		return nil, err
+	}
+	s.wk.salt = base58.Decode(ew.Salt) // Replace auto-generated salt with the one from the wallet file.
+	encWallet := base58.Decode(ew.EncryptedWallet)
+	decWallet := s.wk.decrypt(encWallet)
+	if err := gob.NewDecoder(bytes.NewReader(decWallet)).Decode(w); err != nil {
+		return nil, err
+	}
+	return w, nil
 }
 
 func (s *WalletStore) Export(path string, w *Wallet) error {
@@ -85,38 +102,31 @@ func (s *WalletStore) Export(path string, w *Wallet) error {
 		EncryptedWallet: base58.Encode(encWallet),
 	}
 	jsonWallet, err := json.Marshal(ew)
-	cobra.CheckErr(err)
-	cobra.CheckErr(os.WriteFile(path, jsonWallet, 0660))
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(path, jsonWallet, 0660); err != nil {
+		return err
+	}
 	return nil
 }
 
 // Wallet is a collection of accounts.
 type Wallet struct {
-	accounts []*Account
+	accounts []Account
 }
 
 func NewWallet() *Wallet {
 	w := &Wallet{
-		accounts: make([]*Account, 0),
+		accounts: make([]Account, 0),
 	}
 	return w
 }
 func (w *Wallet) ToBytes() []byte {
-	panic("implement me")
+	var buf bytes.Buffer
+	gob.NewEncoder(&buf).Encode(w)
+	return buf.Bytes()
 }
-func (w *Wallet) AddAccount(a *Account) {
+func (w *Wallet) AddAccount(a Account) {
 	w.accounts = append(w.accounts, a)
-}
-
-type Account struct {
-	Id           string
-	FriendlyName string
-	PrivateKey   string
-	PublicKey    string
-}
-
-func newAccount() *Account {
-	acct := &Account{}
-
-	return acct
 }
