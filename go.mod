@@ -7,14 +7,17 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/spacemeshos/ed25519 v0.0.0-20220825090204-1f103b5756da
+	github.com/stretchr/testify v1.8.0
 	google.golang.org/grpc v1.49.0
 )
 
 require (
 	github.com/cosmos/btcutil v1.0.4 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/spacemeshos/go-scale v0.0.0-20220825080931-832050018560 // indirect
 	github.com/spacemeshos/go-spacemesh v0.1.45 // indirect
 	go.uber.org/atomic v1.10.0 // indirect

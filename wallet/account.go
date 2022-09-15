@@ -1,9 +1,6 @@
 package wallet
 
 import (
-	"bytes"
-	"encoding/gob"
-
 	"github.com/spacemeshos/address"
 )
 
@@ -11,20 +8,23 @@ import (
 type Account struct {
 	Name    string
 	KeyPair BIP32EDKeyPair
+	Chain   []*Chain
 }
 
-func (a *Account) Address() address.Address {
+// NextAddress
+func (a *Account) LastAddress() address.Address {
 	return address.GenerateAddress(a.KeyPair.Public)
 }
 func (a *Account) ToBytes() []byte {
-	var buf bytes.Buffer
-	gob.NewEncoder(&buf).Encode(a)
-	return buf.Bytes()
+	panic("not implemented")
 }
 
 func AccountFromBytes(b []byte) *Account {
-	acct := &Account{}
-	gob.NewDecoder(bytes.NewReader(b)).Decode(acct)
-	// TODO: try raw sign/verify to check the keypair
-	return acct
+	panic("not implemented")
+}
+
+type Chain struct {
+	KeyPair BIP32EDKeyPair
+	// These are the indices of the child keys created from this chain.
+	Index []*BIP32EDKeyPair
 }

@@ -9,8 +9,8 @@ import (
 // Function names inspired by https://github.com/tyler-smith/go-bip32/blob/master/bip32.go
 // This is a POC implementation that relies on the key derivation from the
 // spacemeshos/ed25519 package.
-// We assume all keys are hardened. In the future, we should use the child key
-// derivation function from the BIP32-ED25519 paper
+// We assume all keys are hardened.
+// TODO: In the future, we should use the child key derivation function from the BIP32-ED25519 paper
 // https://github.com/LedgerHQ/orakolo/blob/master/papers/Ed25519_BIP%20Final.pdf
 // so that we can be compatible with other wallets and so that spacemesh can be stored
 // in a wallet containing other coins using the same derivation scheme.
@@ -25,13 +25,13 @@ type BIP32EDKeyPair struct {
 	Salt    []byte
 }
 
-func NewMasterBIP32EDKeyPair(seed []byte) (BIP32EDKeyPair, error) {
+func NewMasterBIP32EDKeyPair(seed []byte) (*BIP32EDKeyPair, error) {
 	if len(seed) != ed25519.SeedSize {
-		return BIP32EDKeyPair{}, ErrInvalidSeed
+		return &BIP32EDKeyPair{}, ErrInvalidSeed
 	}
 	privKey := ed25519.NewKeyFromSeed(seed)
 
-	return BIP32EDKeyPair{
+	return &BIP32EDKeyPair{
 		Private: privKey,
 		Public:  privKey.Public().(ed25519.PublicKey),
 		Path:    [][]uint32{},

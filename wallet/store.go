@@ -44,11 +44,11 @@ type JSONWalletContactData struct {
 }
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
-const pbkdf2Itterations = 120000
-const pbkdf2KeyBytesLen = 32
-const pdkdf2SaltBytesLen = 16
+const Pbkdf2Itterations = 120000
+const Pbkdf2KeyBytesLen = 32
+const Pdkdf2SaltBytesLen = 16
 
-var pbkdf2HashFunc = sha512.New
+var Pbkdf2HashFunc = sha512.New
 
 type WalletKeyOpt func(*WalletKey)
 type WalletKey struct {
@@ -66,13 +66,13 @@ func NewWalletKey(opts ...WalletKeyOpt) *WalletKey {
 
 func WithPassword(password string) WalletKeyOpt {
 	return func(k *WalletKey) {
-		k.salt = make([]byte, pdkdf2SaltBytesLen)
+		k.salt = make([]byte, Pdkdf2SaltBytesLen)
 		_, err := rand.Read(k.salt)
 		cobra.CheckErr(err)
 		k.key = pbkdf2.Key([]byte(password), k.salt,
-			pbkdf2Itterations,
-			pbkdf2KeyBytesLen,
-			pbkdf2HashFunc,
+			Pbkdf2Itterations,
+			Pbkdf2KeyBytesLen,
+			Pbkdf2HashFunc,
 		)
 	}
 }

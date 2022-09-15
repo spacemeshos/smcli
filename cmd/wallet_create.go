@@ -10,6 +10,7 @@ import (
 	"github.com/spacemeshos/smcli/common"
 	"github.com/spacemeshos/smcli/wallet"
 	"github.com/spf13/cobra"
+	"github.com/tyler-smith/go-bip39"
 )
 
 // createCmd represents the create command
@@ -29,7 +30,9 @@ to quickly create a Cobra application.`,
 			wallet.WithPassword(password),
 		)
 		ws := wallet.NewWalletStore(wk)
-		w := wallet.NewWallet()
+		e, _ := bip39.NewEntropy(256)
+		m, _ := bip39.NewMnemonic(e)
+		w := wallet.WalletFromMnemonic(m)
 		cobra.CheckErr(ws.Export(common.WalletFile(), w))
 	},
 }
