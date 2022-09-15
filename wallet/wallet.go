@@ -2,124 +2,43 @@ package wallet
 
 import (
 	"bytes"
-	"crypto/rand"
-	"crypto/sha512"
 	"encoding/gob"
-	"encoding/json"
-	"os"
 
-	"github.com/btcsuite/btcutil/base58"
-	"github.com/spf13/cobra"
-	"github.com/xdg-go/pbkdf2"
+	"github.com/tyler-smith/go-bip39"
 )
-
-// https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
-const pbkdf2Itterations = 120000
-const pbkdf2KeyBytesLen = 32
-const pdkdf2SaltBytesLen = 16
-
-var pbkdf2HashFunc = sha512.New
-
-type WalletKeyOpt func(*WalletKey)
-type WalletKey struct {
-	key  []byte
-	salt []byte
-}
-
-func NewWalletKey(opts ...WalletKeyOpt) *WalletKey {
-	w := &WalletKey{}
-	for _, opt := range opts {
-		opt(w)
-	}
-	return w
-}
-
-func WithPassword(password string) WalletKeyOpt {
-	return func(k *WalletKey) {
-		k.salt = make([]byte, pdkdf2SaltBytesLen)
-		_, err := rand.Read(k.salt)
-		cobra.CheckErr(err)
-		k.key = pbkdf2.Key([]byte(password), k.salt,
-			pbkdf2Itterations,
-			pbkdf2KeyBytesLen,
-			pbkdf2HashFunc,
-		)
-	}
-}
-func (k *WalletKey) encrypt([]byte) []byte {
-	panic("implement me")
-}
-func (k *WalletKey) decrypt([]byte) []byte {
-	panic("implement me")
-}
-
-type WalletOpener interface {
-	Open(path string) (*Wallet, error)
-}
-type WalletExporter interface {
-	Export(path string) error
-}
-
-type ExportableWallet struct {
-	// EncryptedWallet is the encrypted wallet data in base58 encoding.
-	EncryptedWallet string `json:"encrypted_wallet"`
-	// Salt is the salt used to derived the wallet's encryption key in base58 encoding.
-	Salt string `json:"salt"`
-}
-
-type WalletStore struct {
-	wk WalletKey
-}
-
-func NewWalletStore(wk *WalletKey) *WalletStore {
-	return &WalletStore{
-		wk: *wk,
-	}
-}
-
-func (s *WalletStore) Open(path string) (w *Wallet, err error) {
-	jsonWallet, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	ew := &ExportableWallet{}
-	if err = json.Unmarshal(jsonWallet, ew); err != nil {
-		return nil, err
-	}
-	s.wk.salt = base58.Decode(ew.Salt) // Replace auto-generated salt with the one from the wallet file.
-	encWallet := base58.Decode(ew.EncryptedWallet)
-	decWallet := s.wk.decrypt(encWallet)
-	if err := gob.NewDecoder(bytes.NewReader(decWallet)).Decode(w); err != nil {
-		return nil, err
-	}
-	return w, nil
-}
-
-func (s *WalletStore) Export(path string, w *Wallet) error {
-	encWallet := s.wk.encrypt(w.ToBytes())
-	ew := &ExportableWallet{
-		Salt:            base58.Encode(s.wk.salt),
-		EncryptedWallet: base58.Encode(encWallet),
-	}
-	jsonWallet, err := json.Marshal(ew)
-	if err != nil {
-		return err
-	}
-	if err := os.WriteFile(path, jsonWallet, 0660); err != nil {
-		return err
-	}
-	return nil
-}
 
 // Wallet is a collection of accounts.
 type Wallet struct {
-	accounts []Account
+	mnemonic string
+	master   *BIP32EDKeyPair
+	purpose  *BIP32EDKeyPair
+	coinType *BIP32EDKeyPair
+	account  map[uint32]*Account
+	chain    map[uint32]*BIP32EDKeyPair
+	index    map[uint32]*BIP32EDKeyPair
 }
 
 func NewWallet() *Wallet {
+	entropy, _ := bip39.NewEntropy(256)
+	mnemonic, _ := bip39.NewMnemonic(entropy)
+	seed := bip39.NewSeed(mnemonic, "Winning together!")
+	masterKeyPair, _ := NewMasterBIP32EDKeyPair(seed)
+
 	w := &Wallet{
-		accounts: make([]Account, 0),
+		mnemonic: mnemonic,
+		master:   &masterKeyPair,
+		purpose:  nil,
+		coinType: nil,
+		account:  make(map[uint32]*Account),
+		chain:    make(map[uint32]*BIP32EDKeyPair),
+		index:    make(map[uint32]*BIP32EDKeyPair),
 	}
+
+	purposeKeyPair, _ := w.master.NewChildKeyPair(BIP44Purpose())
+	w.purpose = &purposeKeyPair
+	coinTypeKeyPair, _ := purposeKeyPair.NewChildKeyPair(BIP44SpacemeshCoinType())
+	w.coinType = &coinTypeKeyPair
+	w.NewAccount("default")
 	return w
 }
 func (w *Wallet) ToBytes() []byte {
@@ -127,6 +46,12 @@ func (w *Wallet) ToBytes() []byte {
 	gob.NewEncoder(&buf).Encode(w)
 	return buf.Bytes()
 }
-func (w *Wallet) AddAccount(a Account) {
-	w.accounts = append(w.accounts, a)
+func (w *Wallet) NewAccount(name string) *Account {
+	nextAccountNumber := uint32(len(w.account))
+	accountKeyPair, _ := w.coinType.NewChildKeyPair(BIP44Account(nextAccountNumber))
+	w.account[nextAccountNumber] = &Account{
+		Name:    name,
+		KeyPair: accountKeyPair,
+	}
+	return w.account[nextAccountNumber]
 }
