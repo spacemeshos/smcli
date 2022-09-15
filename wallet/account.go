@@ -14,7 +14,7 @@ type Account struct {
 }
 
 func (a *Account) Address() address.Address {
-	return address.GenerateAddress(a.BIP32EDKeyPair.Public)
+	return address.GenerateAddress(a.KeyPair.Public)
 }
 func (a *Account) ToBytes() []byte {
 	var buf bytes.Buffer
