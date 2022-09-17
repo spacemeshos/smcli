@@ -22,8 +22,21 @@ func TestNewAccount(t *testing.T) {
 	mnemonic, _ := bip39.NewMnemonic(entropy)
 	w := wallet.WalletFromMnemonic(mnemonic)
 
-	accName := "test"
+	// Default account already exists on wallet creation at m/44'/540'/0'
+	accName := "default"
 	acc := w.Account(accName)
 	assert.NotNil(t, acc)
 	assert.Equal(t, accName, acc.Name)
+	expectedPath, err := wallet.StringTowallet.HDPath("m/44'/540'/0'")
+	assert.NoError(t, err)
+	assert.Equal(t, expectedPath, acc.Path())
+
+	// Creating a new account increments the account by 1
+	accName = "test account"
+	acc = w.Account(accName)
+	assert.NotNil(t, acc)
+	assert.Equal(t, accName, acc.Name)
+	expectedPath, err = wallet.StringTowallet.HDPath("m/44'/540'/1'")
+	assert.NoError(t, err)
+	assert.Equal(t, expectedPath, acc.Path())
 }

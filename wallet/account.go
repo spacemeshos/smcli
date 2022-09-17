@@ -12,8 +12,12 @@ type Account struct {
 }
 
 // NextAddress
-func (a *Account) LastAddress() address.Address {
-	return address.GenerateAddress(a.KeyPair.Public)
+func (a *Account) NewAddress() address.Address {
+	// return address.GenerateAddress(a.KeyPair.Public)
+	panic("not implemented")
+}
+func (a *Account) Path() HDPath {
+	return a.KeyPair.Path
 }
 func (a *Account) ToBytes() []byte {
 	panic("not implemented")

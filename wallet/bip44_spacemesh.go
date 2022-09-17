@@ -1,5 +1,10 @@
 package wallet
 
+import (
+	"fmt"
+	"regexp"
+)
+
 // Root of the path is m/purpose' (m/44')
 // https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki#purpose
 // We use this to indicate that we're using the BIP44 hierarchy
@@ -38,4 +43,45 @@ func BIP44HardenedChain(chain uint32) uint32 {
 // (m/44'/540'/account'/chain'/address_index')
 func BIP44HardenedAccountIndex(hai uint32) uint32 {
 	return 0x80000000 | hai
+}
+
+// HDPathToString converts a BIP44 HD path to a string of the form
+// "m/44'/540'/account'/chain'/address_index'"
+func HDPathToString(path HDPath) string {
+	s := "m"
+	for _, p := range path {
+
+		if p > 0x80000000 {
+			s += "/" + fmt.Sprint(p-0x80000000) + "'"
+		} else {
+			s += "/" + fmt.Sprint(p)
+		}
+	}
+	return s
+}
+
+func parseUint(s string) uint {
+	var u uint
+	fmt.Sscanf(s, "%d", &u)
+	return u
+}
+
+// StringToHDPath converts a BIP44 HD path string of the form
+// (m/44'/540'/account'/chain'/address_index') to it's uint32 slice representation
+func StringToHDPath(s string) (HDPath, error) {
+	// regex of the form m/44'/540'/account'/chain'/address_index'
+	rWholePath := regexp.MustCompile(`^m(\/\d+'?)+$`)
+	if !rWholePath.Match([]byte(s)) {
+		return nil, fmt.Errorf("invalid HD path string: %s", s)
+	}
+	rCrumbs := regexp.MustCompile(`\/(\d+)('?)`)
+	crumbs := rCrumbs.FindAllStringSubmatch(s, -1)
+	path := make(HDPath, len(crumbs))
+	for i, crumb := range crumbs {
+		path[i] = uint32(parseUint(crumb[1]))
+		if crumb[2] == "'" {
+			path[i] |= 0x80000000
+		}
+	}
+	return path, nil
 }

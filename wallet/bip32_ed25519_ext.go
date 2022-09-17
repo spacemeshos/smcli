@@ -18,10 +18,12 @@ import (
 var ErrInvalidSeed = errors.New("invalid seed length")
 var ErrNotHardened = errors.New("child index must be hardened")
 
+type HDPath []uint32
+
 type BIP32EDKeyPair struct {
 	Private ed25519.PrivateKey
 	Public  ed25519.PublicKey
-	Path    [][]uint32 // we assume the prefix is m/ and all keys are hardened
+	Path    HDPath // we assume the prefix is m/ and all keys are hardened
 	Salt    []byte
 }
 
@@ -34,7 +36,7 @@ func NewMasterBIP32EDKeyPair(seed []byte) (*BIP32EDKeyPair, error) {
 	return &BIP32EDKeyPair{
 		Private: privKey,
 		Public:  privKey.Public().(ed25519.PublicKey),
-		Path:    [][]uint32{},
+		Path:    HDPath{},
 		Salt:    []byte("Spacemesh NaCl"),
 	}, nil
 }
@@ -51,6 +53,6 @@ func (kp *BIP32EDKeyPair) NewChildKeyPair(childIdx uint32) (BIP32EDKeyPair, erro
 	return BIP32EDKeyPair{
 		Private: privKey,
 		Public:  privKey.Public().(ed25519.PublicKey),
-		Path:    append(kp.Path, []uint32{childIdx}),
+		Path:    append(kp.Path, childIdx),
 	}, nil
 }

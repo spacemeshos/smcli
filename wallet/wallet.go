@@ -80,7 +80,7 @@ func (w *Wallet) newAccountLocked(name string) *Account {
 	return w.account[accntNum]
 }
 
-// Account returns the account at the given index.
+// Account returns the account with the given name.
 // If the account does not exist, it is created.
 func (w *Wallet) Account(name string) *Account {
 	w.lock.Lock()
