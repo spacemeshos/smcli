@@ -8,7 +8,7 @@ import (
 )
 
 func TestHDPathToString(t *testing.T) {
-	s := wallet.HDPathToString(wallet.HDPath{0x80000000 | 44, 0x80000000 | 540, 0, 0, 0})
+	s := wallet.HDPathToString(wallet.HDPath{wallet.BIP32HardenedKeyStart | 44, wallet.BIP32HardenedKeyStart | 540, 0, 0, 0})
 	assert.Equal(t, "m/44'/540'/0/0/0", s)
 }
 
@@ -17,11 +17,11 @@ func TestStringHDPath(t *testing.T) {
 		path     string
 		expected wallet.HDPath
 	}{
-		{"m/44'/540'/0", wallet.HDPath{0x80000000 | 44, 0x80000000 | 540, 0}},
-		{"m/44'/540'/0'/0'/0'", wallet.HDPath{0x80000000 | 44, 0x80000000 | 540, 0x80000000, 0x80000000, 0x80000000}},
-		{"m/44'/540'/0'/0/0", wallet.HDPath{0x80000000 | 44, 0x80000000 | 540, 0x80000000, 0, 0}},
-		{"m/44'/540'/0/0'/0", wallet.HDPath{0x80000000 | 44, 0x80000000 | 540, 0, 0x80000000, 0}},
-		{"m/44'/540'/2'/0/0", wallet.HDPath{0x80000000 | 44, 0x80000000 | 540, 0x80000000 | 2, 0, 0}},
+		{"m/44'/540'/0", wallet.HDPath{wallet.BIP32HardenedKeyStart | 44, wallet.BIP32HardenedKeyStart | 540, 0}},
+		{"m/44'/540'/0'/0'/0'", wallet.HDPath{wallet.BIP32HardenedKeyStart | 44, wallet.BIP32HardenedKeyStart | 540, wallet.BIP32HardenedKeyStart, wallet.BIP32HardenedKeyStart, wallet.BIP32HardenedKeyStart}},
+		{"m/44'/540'/0'/0/0", wallet.HDPath{wallet.BIP32HardenedKeyStart | 44, wallet.BIP32HardenedKeyStart | 540, wallet.BIP32HardenedKeyStart, 0, 0}},
+		{"m/44'/540'/0/0'/0", wallet.HDPath{wallet.BIP32HardenedKeyStart | 44, wallet.BIP32HardenedKeyStart | 540, 0, wallet.BIP32HardenedKeyStart, 0}},
+		{"m/44'/540'/2'/0/0", wallet.HDPath{wallet.BIP32HardenedKeyStart | 44, wallet.BIP32HardenedKeyStart | 540, wallet.BIP32HardenedKeyStart | 2, 0, 0}},
 	}
 
 	for _, tv := range testVectors {

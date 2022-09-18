@@ -27,7 +27,7 @@ func TestNewAccount(t *testing.T) {
 	acc := w.Account(accName)
 	assert.NotNil(t, acc)
 	assert.Equal(t, accName, acc.Name)
-	expectedPath, err := wallet.StringTowallet.HDPath("m/44'/540'/0'")
+	expectedPath, err := wallet.StringToHDPath("m/44'/540'/0'")
 	assert.NoError(t, err)
 	assert.Equal(t, expectedPath, acc.Path())
 
@@ -36,7 +36,25 @@ func TestNewAccount(t *testing.T) {
 	acc = w.Account(accName)
 	assert.NotNil(t, acc)
 	assert.Equal(t, accName, acc.Name)
-	expectedPath, err = wallet.StringTowallet.HDPath("m/44'/540'/1'")
+	expectedPath, err = wallet.StringToHDPath("m/44'/540'/1'")
+	assert.NoError(t, err)
+	assert.Equal(t, expectedPath, acc.Path())
+
+	// Test account is still the same
+	accName = "test account"
+	acc = w.Account(accName)
+	assert.NotNil(t, acc)
+	assert.Equal(t, accName, acc.Name)
+	expectedPath, err = wallet.StringToHDPath("m/44'/540'/1'")
+	assert.NoError(t, err)
+	assert.Equal(t, expectedPath, acc.Path())
+
+	// Default account is still the same
+	accName = "default"
+	acc = w.Account(accName)
+	assert.NotNil(t, acc)
+	assert.Equal(t, accName, acc.Name)
+	expectedPath, err = wallet.StringToHDPath("m/44'/540'/0'")
 	assert.NoError(t, err)
 	assert.Equal(t, expectedPath, acc.Path())
 }

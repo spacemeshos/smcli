@@ -61,20 +61,20 @@ func (w *Wallet) newAccountLocked(name string) *Account {
 	accountKeyPair, _ := w.coinType.NewChildKeyPair(BIP44Account(accntNum))
 	w.account[accntNum] = &Account{
 		Name:    name,
-		KeyPair: accountKeyPair,
-		Chain:   make([]*Chain, 0),
+		keyPair: accountKeyPair,
+		chain:   make([]*Chain, 0),
 	}
 	// Initialize 0th chain and index.
 	chainNum := uint32(0)
 	chainKeyPair, _ := accountKeyPair.NewChildKeyPair(BIP44HardenedChain(chainNum))
-	w.account[accntNum].Chain = append(w.account[accntNum].Chain, &Chain{
-		KeyPair: chainKeyPair,
-		Index:   make([]*BIP32EDKeyPair, 0),
+	w.account[accntNum].chain = append(w.account[accntNum].chain, &Chain{
+		keyPair: chainKeyPair,
+		index:   make([]*BIP32EDKeyPair, 0),
 	})
 	indexNum := uint32(0)
 	indexKeyPair, _ := chainKeyPair.NewChildKeyPair(BIP44HardenedAccountIndex(indexNum))
-	w.account[accntNum].Chain[chainNum].Index = append(
-		w.account[accntNum].Chain[chainNum].Index,
+	w.account[accntNum].chain[chainNum].index = append(
+		w.account[accntNum].chain[chainNum].index,
 		&indexKeyPair,
 	)
 	return w.account[accntNum]

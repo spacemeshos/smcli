@@ -6,6 +6,10 @@ import (
 	"github.com/spacemeshos/ed25519"
 )
 
+// BIP32HardenedKeyStart: keys with index >= this must be hardened as per BIP32.
+// https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#extended-keys
+const BIP32HardenedKeyStart uint32 = 0x80000000
+
 // Function names inspired by https://github.com/tyler-smith/go-bip32/blob/master/bip32.go
 // This is a POC implementation that relies on the key derivation from the
 // spacemeshos/ed25519 package.
@@ -42,7 +46,7 @@ func NewMasterBIP32EDKeyPair(seed []byte) (*BIP32EDKeyPair, error) {
 }
 
 func (kp *BIP32EDKeyPair) NewChildKeyPair(childIdx uint32) (BIP32EDKeyPair, error) {
-	if childIdx < 0x80000000 {
+	if childIdx < BIP32HardenedKeyStart {
 		return BIP32EDKeyPair{}, ErrNotHardened
 	}
 	privKey := ed25519.NewDerivedKeyFromSeed(

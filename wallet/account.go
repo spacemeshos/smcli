@@ -7,17 +7,23 @@ import (
 // Account is a single account in a wallet.
 type Account struct {
 	Name    string
-	KeyPair BIP32EDKeyPair
-	Chain   []*Chain
+	keyPair BIP32EDKeyPair
+	chain   []*Chain
 }
 
-// NextAddress
-func (a *Account) NewAddress() address.Address {
+// NewAddress creates a new key pair on the given chain in this account and
+// returns it's address.
+func (a *Account) NewAddress(chain uint32) address.Address {
 	// return address.GenerateAddress(a.KeyPair.Public)
 	panic("not implemented")
 }
+
+func (a *Account) KeyPair(addr address.Address) BIP32EDKeyPair {
+	panic("not implemented")
+}
+
 func (a *Account) Path() HDPath {
-	return a.KeyPair.Path
+	return a.keyPair.Path
 }
 func (a *Account) ToBytes() []byte {
 	panic("not implemented")
@@ -28,7 +34,7 @@ func AccountFromBytes(b []byte) *Account {
 }
 
 type Chain struct {
-	KeyPair BIP32EDKeyPair
+	keyPair BIP32EDKeyPair
 	// These are the indices of the child keys created from this chain.
-	Index []*BIP32EDKeyPair
+	index []*BIP32EDKeyPair
 }

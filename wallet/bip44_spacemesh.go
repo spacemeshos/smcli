@@ -20,7 +20,7 @@ func BIP44SpacemeshCoinType() uint32 {
 
 // After the coin type comes the account (m/44'/540'/account')
 func BIP44Account(account uint32) uint32 {
-	return 0x80000000 | account
+	return BIP32HardenedKeyStart | account
 }
 
 // After the account comes the change level, BUT as of now, we don't support
@@ -34,7 +34,7 @@ func BIP44Account(account uint32) uint32 {
 // after the account level.
 // (m/44'/540'/account'/chain')
 func BIP44HardenedChain(chain uint32) uint32 {
-	return 0x80000000 | chain
+	return BIP32HardenedKeyStart | chain
 }
 
 // After the Hardened Chain level comes the address indeces, as of now, we don't
@@ -42,7 +42,7 @@ func BIP44HardenedChain(chain uint32) uint32 {
 // here. All addresses will be hardened.
 // (m/44'/540'/account'/chain'/address_index')
 func BIP44HardenedAccountIndex(hai uint32) uint32 {
-	return 0x80000000 | hai
+	return BIP32HardenedKeyStart | hai
 }
 
 // HDPathToString converts a BIP44 HD path to a string of the form
@@ -51,8 +51,8 @@ func HDPathToString(path HDPath) string {
 	s := "m"
 	for _, p := range path {
 
-		if p > 0x80000000 {
-			s += "/" + fmt.Sprint(p-0x80000000) + "'"
+		if p > BIP32HardenedKeyStart {
+			s += "/" + fmt.Sprint(p-BIP32HardenedKeyStart) + "'"
 		} else {
 			s += "/" + fmt.Sprint(p)
 		}
@@ -80,7 +80,7 @@ func StringToHDPath(s string) (HDPath, error) {
 	for i, crumb := range crumbs {
 		path[i] = uint32(parseUint(crumb[1]))
 		if crumb[2] == "'" {
-			path[i] |= 0x80000000
+			path[i] |= BIP32HardenedKeyStart
 		}
 	}
 	return path, nil
