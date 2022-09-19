@@ -10,12 +10,13 @@ import (
 
 // Wallet is a collection of accounts.
 type Wallet struct {
-	mnemonic string
-	master   *BIP32EDKeyPair
-	purpose  *BIP32EDKeyPair
-	coinType *BIP32EDKeyPair
-	account  map[uint32]*Account
-	lock     sync.Mutex
+	mnemonic            string
+	master              *BIP32EDKeyPair
+	purpose             *BIP32EDKeyPair
+	coinType            *BIP32EDKeyPair
+	account             map[uint32]*Account
+	numHardenedAccounts uint32
+	lock                sync.Mutex
 }
 
 // WalletFromMnemonic creates a new wallet from the given mnemonic.
@@ -57,26 +58,17 @@ func (w *Wallet) ToBytes() []byte {
 	panic("not implemented")
 }
 func (w *Wallet) newAccountLocked(name string) *Account {
-	accntNum := uint32(len(w.account))
+	accntNum := w.numHardenedAccounts
 	accountKeyPair, _ := w.coinType.NewChildKeyPair(BIP44Account(accntNum))
 	w.account[accntNum] = &Account{
 		Name:    name,
 		keyPair: accountKeyPair,
-		chain:   make([]*Chain, 0),
+		chains:  make(map[uint32]*chain, 0),
 	}
+	w.numHardenedAccounts = accntNum + 1
 	// Initialize 0th chain and index.
-	chainNum := uint32(0)
-	chainKeyPair, _ := accountKeyPair.NewChildKeyPair(BIP44HardenedChain(chainNum))
-	w.account[accntNum].chain = append(w.account[accntNum].chain, &Chain{
-		keyPair: chainKeyPair,
-		index:   make([]*BIP32EDKeyPair, 0),
-	})
-	indexNum := uint32(0)
-	indexKeyPair, _ := chainKeyPair.NewChildKeyPair(BIP44HardenedAccountIndex(indexNum))
-	w.account[accntNum].chain[chainNum].index = append(
-		w.account[accntNum].chain[chainNum].index,
-		&indexKeyPair,
-	)
+	chainNum := 0 | BIP32HardenedKeyStart
+	w.account[accntNum].NextAddress(chainNum)
 	return w.account[accntNum]
 }
 
