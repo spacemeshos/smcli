@@ -13,15 +13,19 @@ import (
 	"github.com/xdg-go/pbkdf2"
 )
 
-type JSONWallet struct {
+type JSONDecryptedWalletCipherText struct {
 	Mnemonic string `json:"mnemonic"`
 	Accounts []struct {
 		DisplayName string `json:"displayName"`
 		Created     string `json:"created"`
 		Path        string `json:"path"`
-		PublicKey   string `json:"publicKey"`
-		SecretKey   string `json:" secretKey"`
+		// PublicKey   string `json:"publicKey"`
+		// SecretKey   string `json:" secretKey"`
 	} `json:"accounts"`
+	Addresses []struct {
+		Path    string `json:"path"`
+		Address string `json:"address"`
+	} `json:"addresses"`
 }
 
 type JSONWalletMetaData struct {
