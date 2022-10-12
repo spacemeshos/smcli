@@ -61,7 +61,10 @@ func NewMasterBIP32EDKeyPair(seed []byte) (*BIP32EDKeyPair, error) {
 		Private: privKey,
 		Public:  privKey.Public().(ed25519.PublicKey),
 		Path:    HDPath{},
-		Salt:    []byte("Spacemesh NaCl"),
+		Salt:    []byte("Spacemesh blockmesh"), //TODO: decide on a salt
+		// If I understand correctly, we don't want a random salt here
+		// because we want to be able to derive the same key from the same seed
+		// every time.
 	}, nil
 }
 
