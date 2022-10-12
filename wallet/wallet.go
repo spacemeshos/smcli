@@ -3,6 +3,7 @@ package wallet
 import (
 	"fmt"
 
+	"github.com/spacemeshos/ed25519"
 	"github.com/spf13/cobra"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -21,9 +22,10 @@ func WalletFromMnemonic(mnemonic string) *Wallet {
 	}
 	// TODO: add option for user to provide passphrase
 	seed := bip39.NewSeed(mnemonic, "")
-	// Arbitrarily taking the first 32 bytes as the seed for the private key.
-	// Not sure if this is the right thing to do. Or if it matters at all...
-	masterKeyPair, err := NewMasterBIP32EDKeyPair(seed[32:])
+	// Arbitrarily taking the first 32 bytes as the seed for the private key
+	// because spacemeshos/ed25519 gets angry if it gets all 64 bytes.
+	// Not sure if this is the correct approach.
+	masterKeyPair, err := NewMasterBIP32EDKeyPair(seed[ed25519.SeedSize:])
 	cobra.CheckErr(err)
 
 	w := &Wallet{
@@ -36,7 +38,7 @@ func (w *Wallet) Mnemonic() string {
 	return w.mnemonic
 }
 func (w *Wallet) ToBytes() []byte {
-	panic("not implemented")
+	return []byte(w.mnemonic)
 }
 
 // KeyPair returns the key pair for the given HDPath.

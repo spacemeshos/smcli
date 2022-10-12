@@ -1,5 +1,7 @@
 package wallet
 
+// TODO: add a compatability implementation for the current smapp wallet store
+
 type JSONSMAPPDecryptedWalletCipherText struct {
 	Mnemonic string `json:"mnemonic"` // required
 	Accounts []struct {

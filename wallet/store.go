@@ -1,12 +1,10 @@
 package wallet
 
 import (
-	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha512"
-	"encoding/gob"
 	"encoding/json"
 	"io"
 	"os"
@@ -129,8 +127,11 @@ func NewStore(wk *WalletKey) *WalletStore {
 	}
 }
 
-func (s *WalletStore) Open(path string) (w *Wallet, err error) {
-	jsonWallet, err := os.ReadFile(path)
+// Just a quick storage of the encrypted mnemonic for now.
+// TODO: add metadata, decide what else should actually go in the "core wallet"
+
+func (s *WalletStore) Open(file *os.File) (w *Wallet, err error) {
+	jsonWallet, err := os.ReadFile(file.Name())
 	if err != nil {
 		return nil, err
 	}
@@ -140,15 +141,13 @@ func (s *WalletStore) Open(path string) (w *Wallet, err error) {
 	}
 	s.wk.salt = base58.Decode(ew.Salt) // Replace auto-generated salt with the one from the wallet file.
 	encWallet := base58.Decode(ew.EncryptedWallet)
-	decWallet := s.wk.decrypt(encWallet, ew.Nonce)
-	if err := gob.NewDecoder(bytes.NewReader(decWallet)).Decode(w); err != nil {
-		return nil, err
-	}
+	decMnemonic := s.wk.decrypt(encWallet, ew.Nonce)
+	w = WalletFromMnemonic(string(decMnemonic))
 	return w, nil
 }
 
-func (s *WalletStore) Export(path string, w *Wallet) error {
-	encWallet, nonce := s.wk.encrypt(w.ToBytes())
+func (s *WalletStore) Export(file *os.File, w *Wallet) error {
+	encWallet, nonce := s.wk.encrypt([]byte(w.Mnemonic()))
 	ew := &ExportableWallet{
 		Salt:            base58.Encode(s.wk.salt),
 		EncryptedWallet: base58.Encode(encWallet),
@@ -158,7 +157,7 @@ func (s *WalletStore) Export(path string, w *Wallet) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(path, jsonWallet, 0660); err != nil {
+	if _, err := file.Write(jsonWallet); err != nil {
 		return err
 	}
 	return nil

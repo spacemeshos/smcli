@@ -33,7 +33,11 @@ to quickly create a Cobra application.`,
 		e, _ := bip39.NewEntropy(256)
 		m, _ := bip39.NewMnemonic(e)
 		w := wallet.WalletFromMnemonic(m)
-		cobra.CheckErr(ws.Export(common.WalletFile(), w))
+		f, err := os.OpenFile(common.WalletFile(), os.O_WRONLY|os.O_CREATE, 0660)
+		cobra.CheckErr(err)
+		cobra.CheckErr(
+			ws.Export(f, w),
+		)
 	},
 }
 
