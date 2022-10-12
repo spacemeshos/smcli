@@ -28,8 +28,8 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 	w := wallet.WalletFromMnemonic(mnemonic)
 	keyPath, err := wallet.StringToHDPath("m/44'/540'/0'/0'/0'")
 	assert.NoError(t, err)
-	keyPair := w.ComputeKeyPair(keyPath)
-
+	keyPair, err := w.ComputeKeyPair(keyPath)
+	assert.NoError(t, err)
 	expPubKey :=
 		"c177dee3e454b2505f9a511155aad4afe8fea227db189b3aaaa9b092fe45567b"
 	expPrivKey :=
@@ -57,114 +57,54 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 	assert.Equal(t, keyPair.Public, extractedPubKey)
 }
 
-func TestNewAccount(t *testing.T) {
+func TestKeysInWalletMaintainExpectedPath(t *testing.T) {
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
 	w := wallet.WalletFromMnemonic(mnemonic)
 
-	// Default account already exists on wallet creation at m/44'/540'/0'
-	accName := "default"
-	acc := w.Account(accName)
-	assert.NotNil(t, acc)
-	assert.Equal(t, accName, acc.Name)
-	expectedPath, err := wallet.StringToHDPath("m/44'/540'/0'")
-	assert.NoError(t, err)
-	assert.Equal(t, expectedPath, acc.Path())
-
-	// Creating a new account increments the account by 1
-	accName = "test account"
-	acc = w.Account(accName)
-	assert.NotNil(t, acc)
-	assert.Equal(t, accName, acc.Name)
-	expectedPath, err = wallet.StringToHDPath("m/44'/540'/1'")
-	assert.NoError(t, err)
-	assert.Equal(t, expectedPath, acc.Path())
-
-	// Test account is still the same
-	accName = "test account"
-	acc = w.Account(accName)
-	assert.NotNil(t, acc)
-	assert.Equal(t, accName, acc.Name)
-	expectedPath, err = wallet.StringToHDPath("m/44'/540'/1'")
-	assert.NoError(t, err)
-	assert.Equal(t, expectedPath, acc.Path())
-
-	// Default account is still the same
-	accName = "default"
-	acc = w.Account(accName)
-	assert.NotNil(t, acc)
-	assert.Equal(t, accName, acc.Name)
-	expectedPath, err = wallet.StringToHDPath("m/44'/540'/0'")
-	assert.NoError(t, err)
-	assert.Equal(t, expectedPath, acc.Path())
-}
-
-func benchMarkNewAccount(n int, b *testing.B) {
-	entropy, _ := bip39.NewEntropy(256)
-	mnemonic, _ := bip39.NewMnemonic(entropy)
-	w := wallet.WalletFromMnemonic(mnemonic)
-	for i := 0; i < b.N; i++ {
-		for j := 0; j < n; j++ {
-			acctNum := j
-			w.Account(fmt.Sprintf("test account %d", acctNum))
-		}
+	for i := 0; i < 100; i++ {
+		path, _ := wallet.StringToHDPath(fmt.Sprintf("m/44'/540'/%d'/%d'/%d'", i, i, i))
+		keyPair, err := w.ComputeKeyPair(path)
+		assert.NoError(t, err)
+		assert.Equal(t, keyPair.Path, path)
 	}
 }
 
-func BenchmarkNewAccount1000(b *testing.B) {
-	benchMarkNewAccount(1000, b)
-}
-func BenchmarkNewAccount2000(b *testing.B) {
-	benchMarkNewAccount(2000, b)
-}
-func BenchmarkNewAccount3000(b *testing.B) {
-	benchMarkNewAccount(3000, b)
-}
-func BenchmarkNewAccount4000(b *testing.B) {
-	benchMarkNewAccount(4000, b)
-}
-func BenchmarkNewAccount5000(b *testing.B) {
-	benchMarkNewAccount(5000, b)
-}
-func BenchmarkNewAccount6000(b *testing.B) {
-	benchMarkNewAccount(6000, b)
-}
-func BenchmarkNewAccount7000(b *testing.B) {
-	benchMarkNewAccount(7000, b)
-}
-func BenchmarkNewAccount8000(b *testing.B) {
-	benchMarkNewAccount(8000, b)
-}
-func BenchmarkNewAccount9000(b *testing.B) {
-	benchMarkNewAccount(9000, b)
+func TestComputeKeyPairFailsForUnhardenedPathSegment(t *testing.T) {
+	entropy, _ := bip39.NewEntropy(256)
+	mnemonic, _ := bip39.NewMnemonic(entropy)
+	w := wallet.WalletFromMnemonic(mnemonic)
+	path, _ := wallet.StringToHDPath("m/44'/540'/0'/0'/0")
+	_, err := w.ComputeKeyPair(path)
+	assert.Error(t, err)
 }
 
-func BenchmarkNewAccount10000(b *testing.B) {
-	benchMarkNewAccount(10000, b)
+func benchmarkComputeKeyPair(n int, b *testing.B) {
+	entropy, _ := bip39.NewEntropy(256)
+	mnemonic, _ := bip39.NewMnemonic(entropy)
+	w := wallet.WalletFromMnemonic(mnemonic)
+	for i := 0; i < b.N; i++ { // benchmark-controlled loop
+		for j := 0; j < n; j++ { // specified number of iterations
+			path, _ := wallet.StringToHDPath(fmt.Sprintf("m/44'/540'/0'/0'/%d'", j))
+			w.ComputeKeyPair(path)
+		}
+	}
 }
-
-func BenchmarkNewAccount20000(b *testing.B) {
-	benchMarkNewAccount(20000, b)
+func Benchmark10000(b *testing.B) {
+	benchmarkComputeKeyPair(10000, b)
 }
-
-func BenchmarkNewAccount30000(b *testing.B) {
-	benchMarkNewAccount(30000, b)
+func Benchmark20000(b *testing.B) {
+	benchmarkComputeKeyPair(20000, b)
 }
-func BenchmarkNewAccount40000(b *testing.B) {
-	benchMarkNewAccount(40000, b)
+func Benchmark30000(b *testing.B) {
+	benchmarkComputeKeyPair(30000, b)
 }
-func BenchmarkNewAccount50000(b *testing.B) {
-	benchMarkNewAccount(50000, b)
+func Benchmark40000(b *testing.B) {
+	benchmarkComputeKeyPair(40000, b)
 }
-func BenchmarkNewAccount60000(b *testing.B) {
-	benchMarkNewAccount(60000, b)
+func Benchmark50000(b *testing.B) {
+	benchmarkComputeKeyPair(50000, b)
 }
-func BenchmarkNewAccount70000(b *testing.B) {
-	benchMarkNewAccount(70000, b)
+func Benchmark100000(b *testing.B) {
+	benchmarkComputeKeyPair(100000, b)
 }
-func BenchmarkNewAccount80000(b *testing.B) {
-	benchMarkNewAccount(80000, b)
-}
-
-// 3103596912 ns/op
-// 2777190847 ns/op

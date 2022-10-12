@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -9,13 +10,9 @@ import (
 
 // Wallet is a collection of accounts.
 type Wallet struct {
-	mnemonic            string
-	master              *BIP32EDKeyPair
-	purpose             *BIP32EDKeyPair
-	coinType            *BIP32EDKeyPair
-	account             map[uint32]*Account
-	numHardenedAccounts uint32
-	lock                sync.Mutex
+	mnemonic      string
+	masterKeyPair *BIP32EDKeyPair
+	lock          sync.Mutex
 }
 
 // WalletFromMnemonic creates a new wallet from the given mnemonic.
@@ -24,13 +21,6 @@ func WalletFromMnemonic(mnemonic string) *Wallet {
 	if !bip39.IsMnemonicValid(mnemonic) {
 		panic("invalid mnemonic")
 	}
-	// mBytes := []byte(mnemonic)
-	// salt := []byte("The lottery is a tax on people who are bad at math.")
-	// if len(salt) < Pdkdf2SaltBytesLen {
-	// panic("salt too short")
-	// }
-	// seed := pbkdf2.Key([]byte(mnemonic), append([]byte(salt), mBytes...),
-	// 	Pbkdf2Itterations, EncKeyLen, sha512.New)
 	// TODO: add option for user to provide passphrase
 	seed := bip39.NewSeed(mnemonic, "")
 	// Arbitrarily taking the first 32 bytes as the seed for the private key.
@@ -39,20 +29,9 @@ func WalletFromMnemonic(mnemonic string) *Wallet {
 	cobra.CheckErr(err)
 
 	w := &Wallet{
-		mnemonic: mnemonic,
-		master:   masterKeyPair,
-		purpose:  nil,
-		coinType: nil,
-		account:  make(map[uint32]*Account),
+		mnemonic:      mnemonic,
+		masterKeyPair: masterKeyPair,
 	}
-
-	purposeKeyPair, err := w.master.NewChildKeyPair(BIP44Purpose())
-	cobra.CheckErr(err)
-	w.purpose = &purposeKeyPair
-	coinTypeKeyPair, err := purposeKeyPair.NewChildKeyPair(BIP44SpacemeshCoinType())
-	cobra.CheckErr(err)
-	w.coinType = &coinTypeKeyPair
-	w.newAccountLocked("default")
 	return w
 }
 func (w *Wallet) Mnemonic() string {
@@ -63,53 +42,31 @@ func (w *Wallet) Mnemonic() string {
 func (w *Wallet) ToBytes() []byte {
 	panic("not implemented")
 }
-func (w *Wallet) newAccountLocked(name string) *Account {
-	accntNum := w.numHardenedAccounts
-	accountKeyPair, _ := w.coinType.NewChildKeyPair(BIP44Account(accntNum))
-	w.account[accntNum] = &Account{
-		Name:    name,
-		keyPair: accountKeyPair,
-		chains:  make(map[uint32]*chain, 0),
-		lock:    &sync.Mutex{},
-	}
-	w.numHardenedAccounts = accntNum + 1
-	// Initialize 0th chain and index.
-	chainNum := 0 | BIP32HardenedKeyStart
-	w.account[accntNum].NextAddress(chainNum)
-	return w.account[accntNum]
-}
 
 // KeyPair returns the key pair for the given HDPath.
 // It will compute it every time from the mater key.
-func (w *Wallet) ComputeKeyPair(path HDPath) BIP32EDKeyPair {
+func (w *Wallet) ComputeKeyPair(path HDPath) (*BIP32EDKeyPair, error) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
+	if !IsPathCompletelyHardened(path) {
+		return nil, fmt.Errorf("unhardened keys aren't supported: path must be completely hardened" +
+			" until the new Child Key Derivation function is implemented")
+	}
 	if path.Purpose() != BIP44Purpose() {
 		panic("invalid path: purpose is not BIP44 (44)")
 	}
+	purpose, err := w.masterKeyPair.NewChildKeyPair(BIP44Purpose())
+	cobra.CheckErr(err)
 	if path.CoinType() != BIP44SpacemeshCoinType() {
 		panic("invalid path: coin type is not spacemesh (540)")
 	}
-	ct, err := w.master.NewChildKeyPair(BIP44Account(path.CoinType()))
-	cobra.CheckErr(err)
-	acct, err := ct.NewChildKeyPair(BIP44Account(path.Account()))
-	cobra.CheckErr(err)
-	chain, err := acct.NewChildKeyPair(BIP44Account(path.Chain()))
-	cobra.CheckErr(err)
-	index, err := chain.NewChildKeyPair(BIP44Account(path.Index()))
-	cobra.CheckErr(err)
-	return index
-}
+	cointype, err := purpose.NewChildKeyPair(BIP44SpacemeshCoinType())
 
-// Account returns the account with the given name.
-// If the account does not exist, it is created.
-func (w *Wallet) Account(name string) *Account {
-	w.lock.Lock()
-	defer w.lock.Unlock()
-	for _, acct := range w.account {
-		if acct.Name == name {
-			return acct
-		}
-	}
-	return w.newAccountLocked(name)
+	acct, err := cointype.NewChildKeyPair(path.Account())
+	cobra.CheckErr(err)
+	chain, err := acct.NewChildKeyPair(path.Chain())
+	cobra.CheckErr(err)
+	index, err := chain.NewChildKeyPair(path.Index())
+	cobra.CheckErr(err)
+	return &index, nil
 }

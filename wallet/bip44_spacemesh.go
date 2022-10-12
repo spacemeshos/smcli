@@ -45,6 +45,15 @@ func BIP44HardenedAccountIndex(hai uint32) uint32 {
 	return BIP32HardenedKeyStart | hai
 }
 
+func IsPathCompletelyHardened(path HDPath) bool {
+	for _, p := range path {
+		if p < BIP32HardenedKeyStart {
+			return false
+		}
+	}
+	return true
+}
+
 // HDPathToString converts a BIP44 HD path to a string of the form
 // "m/44'/540'/account'/chain'/address_index'"
 func HDPathToString(path HDPath) string {
