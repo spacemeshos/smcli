@@ -1,11 +1,10 @@
 package wallet
 
 import (
-	"crypto/sha512"
 	"sync"
 
+	"github.com/spf13/cobra"
 	"github.com/tyler-smith/go-bip39"
-	"github.com/xdg-go/pbkdf2"
 )
 
 // Wallet is a collection of accounts.
@@ -25,14 +24,19 @@ func WalletFromMnemonic(mnemonic string) *Wallet {
 	if !bip39.IsMnemonicValid(mnemonic) {
 		panic("invalid mnemonic")
 	}
-	mBytes := []byte(mnemonic)
-	salt := []byte("The lottery is a tax on people who are bad at math.")
-	if len(salt) < Pdkdf2SaltBytesLen {
-		panic("salt too short")
-	}
-	seed := pbkdf2.Key([]byte(mnemonic), append([]byte(salt), mBytes...),
-		Pbkdf2Itterations, Pbkdf2KeyBytesLen, sha512.New)
-	masterKeyPair, _ := NewMasterBIP32EDKeyPair(seed)
+	// mBytes := []byte(mnemonic)
+	// salt := []byte("The lottery is a tax on people who are bad at math.")
+	// if len(salt) < Pdkdf2SaltBytesLen {
+	// panic("salt too short")
+	// }
+	// seed := pbkdf2.Key([]byte(mnemonic), append([]byte(salt), mBytes...),
+	// 	Pbkdf2Itterations, EncKeyLen, sha512.New)
+	// TODO: add option for user to provide passphrase
+	seed := bip39.NewSeed(mnemonic, "")
+	// Arbitrarily taking the first 32 bytes as the seed for the private key.
+	// Not sure if this is the right thing to do. Or if it matters at all...
+	masterKeyPair, err := NewMasterBIP32EDKeyPair(seed[32:])
+	cobra.CheckErr(err)
 
 	w := &Wallet{
 		mnemonic: mnemonic,
@@ -42,9 +46,11 @@ func WalletFromMnemonic(mnemonic string) *Wallet {
 		account:  make(map[uint32]*Account),
 	}
 
-	purposeKeyPair, _ := w.master.NewChildKeyPair(BIP44Purpose())
+	purposeKeyPair, err := w.master.NewChildKeyPair(BIP44Purpose())
+	cobra.CheckErr(err)
 	w.purpose = &purposeKeyPair
-	coinTypeKeyPair, _ := purposeKeyPair.NewChildKeyPair(BIP44SpacemeshCoinType())
+	coinTypeKeyPair, err := purposeKeyPair.NewChildKeyPair(BIP44SpacemeshCoinType())
+	cobra.CheckErr(err)
 	w.coinType = &coinTypeKeyPair
 	w.newAccountLocked("default")
 	return w
@@ -64,12 +70,35 @@ func (w *Wallet) newAccountLocked(name string) *Account {
 		Name:    name,
 		keyPair: accountKeyPair,
 		chains:  make(map[uint32]*chain, 0),
+		lock:    &sync.Mutex{},
 	}
 	w.numHardenedAccounts = accntNum + 1
 	// Initialize 0th chain and index.
 	chainNum := 0 | BIP32HardenedKeyStart
 	w.account[accntNum].NextAddress(chainNum)
 	return w.account[accntNum]
+}
+
+// KeyPair returns the key pair for the given HDPath.
+// It will compute it every time from the mater key.
+func (w *Wallet) ComputeKeyPair(path HDPath) BIP32EDKeyPair {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+	if path.Purpose() != BIP44Purpose() {
+		panic("invalid path: purpose is not BIP44 (44)")
+	}
+	if path.CoinType() != BIP44SpacemeshCoinType() {
+		panic("invalid path: coin type is not spacemesh (540)")
+	}
+	ct, err := w.master.NewChildKeyPair(BIP44Account(path.CoinType()))
+	cobra.CheckErr(err)
+	acct, err := ct.NewChildKeyPair(BIP44Account(path.Account()))
+	cobra.CheckErr(err)
+	chain, err := acct.NewChildKeyPair(BIP44Account(path.Chain()))
+	cobra.CheckErr(err)
+	index, err := chain.NewChildKeyPair(BIP44Account(path.Index()))
+	cobra.CheckErr(err)
+	return index
 }
 
 // Account returns the account with the given name.

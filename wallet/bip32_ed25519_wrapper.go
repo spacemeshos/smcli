@@ -24,6 +24,26 @@ var ErrNotHardened = errors.New("child index must be hardened")
 
 type HDPath []uint32
 
+func (p HDPath) String() string {
+	return HDPathToString(p)
+}
+
+func (p HDPath) Purpose() uint32 {
+	return p[0]
+}
+func (p HDPath) CoinType() uint32 {
+	return p[1]
+}
+func (p HDPath) Account() uint32 {
+	return p[2]
+}
+func (p HDPath) Chain() uint32 {
+	return p[3]
+}
+func (p HDPath) Index() uint32 {
+	return p[4]
+}
+
 type BIP32EDKeyPair struct {
 	Private ed25519.PrivateKey
 	Public  ed25519.PublicKey
@@ -33,7 +53,7 @@ type BIP32EDKeyPair struct {
 
 func NewMasterBIP32EDKeyPair(seed []byte) (*BIP32EDKeyPair, error) {
 	if len(seed) != ed25519.SeedSize {
-		return &BIP32EDKeyPair{}, ErrInvalidSeed
+		return nil, ErrInvalidSeed
 	}
 	privKey := ed25519.NewKeyFromSeed(seed)
 

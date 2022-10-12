@@ -2,57 +2,37 @@ package wallet
 
 import (
 	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha512"
 	"encoding/gob"
 	"encoding/json"
+	"io"
 	"os"
 
+	"github.com/alexedwards/argon2id"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/spf13/cobra"
 	"github.com/xdg-go/pbkdf2"
 )
 
-type JSONDecryptedWalletCipherText struct {
-	Mnemonic string `json:"mnemonic"`
-	Accounts []struct {
-		DisplayName string `json:"displayName"`
-		Created     string `json:"created"`
-		Path        string `json:"path"`
-		// PublicKey   string `json:"publicKey"`
-		// SecretKey   string `json:" secretKey"`
-	} `json:"accounts"`
-	Addresses []struct {
-		Path    string `json:"path"`
-		Address string `json:"address"`
-	} `json:"addresses"`
-}
-
-type JSONWalletMetaData struct {
-	DisplayName string `json:"displayName"`
-	Created     string `json:"created"`
-	NetID       string `json:"netId"`
-	RemoteAPI   string `json:"remoteApi"`
-	HdID        string `json:"hd_id"`
-	Meta        struct {
-		Salt string `json:"salt"`
-	} `json:"meta"`
-}
-type JSONWalletCryptoData struct {
-	Cipher     string `json:"cipher"`
-	CipherText string `json:"cipherText"`
-}
-type JSONWalletContactData struct {
-	Nickname string `json:"nickname"`
-	Address  string `json:"address"`
-}
+const EncKeyLen = 32
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
 const Pbkdf2Itterations = 120000
-const Pbkdf2KeyBytesLen = 32
 const Pdkdf2SaltBytesLen = 16
 
 var Pbkdf2HashFunc = sha512.New
+
+// https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#argon2id
+var Argon2idParams = &argon2id.Params{
+	Memory:      64 * 1024,
+	Iterations:  3,
+	Parallelism: 4,
+	SaltLength:  16,
+	KeyLength:   EncKeyLen,
+}
 
 type WalletKeyOpt func(*WalletKey)
 type WalletKey struct {
@@ -60,31 +40,67 @@ type WalletKey struct {
 	salt []byte
 }
 
-func NewWalletKey(opts ...WalletKeyOpt) *WalletKey {
+func NewKey(opts ...WalletKeyOpt) *WalletKey {
 	w := &WalletKey{}
 	for _, opt := range opts {
 		opt(w)
 	}
+	if w.key == nil {
+		panic("Some form of key generation method must be provided. Try WithXXXPassword.")
+	}
+
 	return w
 }
 
-func WithPassword(password string) WalletKeyOpt {
+// Complies with FIPS-140
+func WithPbkdf2Password(password string) WalletKeyOpt {
 	return func(k *WalletKey) {
 		k.salt = make([]byte, Pdkdf2SaltBytesLen)
 		_, err := rand.Read(k.salt)
 		cobra.CheckErr(err)
 		k.key = pbkdf2.Key([]byte(password), k.salt,
 			Pbkdf2Itterations,
-			Pbkdf2KeyBytesLen,
+			EncKeyLen,
 			Pbkdf2HashFunc,
 		)
 	}
 }
-func (k *WalletKey) encrypt([]byte) []byte {
-	panic("implement me")
+
+// Is better, but not FIPS-140 compliant.
+func WithArgon2idPassword(password string) WalletKeyOpt {
+	return func(k *WalletKey) {
+		hash, err := argon2id.CreateHash(password, Argon2idParams)
+		cobra.CheckErr(err)
+		_, salt, key, err := argon2id.DecodeHash(hash)
+		cobra.CheckErr(err)
+		k.salt = salt
+		k.key = key
+	}
 }
-func (k *WalletKey) decrypt([]byte) []byte {
-	panic("implement me")
+
+// https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html#71-encryption-types-to-use
+func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte) {
+	block, err := aes.NewCipher(k.key)
+	cobra.CheckErr(err)
+	// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
+	// TODO: Remind user to not use the same password to encrypt 4 billion times.
+	nonce = make([]byte, 12)
+	_, err = io.ReadFull(rand.Reader, nonce)
+	cobra.CheckErr(err)
+	aesgcm, err := cipher.NewGCM(block)
+	cobra.CheckErr(err)
+	ciphertext = aesgcm.Seal(nil, nonce, plaintext, nil)
+	return ciphertext, nonce
+}
+func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte) {
+	block, err := aes.NewCipher(k.key)
+	cobra.CheckErr(err)
+	aesgcm, err := cipher.NewGCM(block)
+	cobra.CheckErr(err)
+	plaintext, err = aesgcm.Open(nil, nonce, ciphertext, nil)
+	cobra.CheckErr(err)
+
+	return plaintext
 }
 
 type WalletOpener interface {
@@ -99,13 +115,15 @@ type ExportableWallet struct {
 	EncryptedWallet string `json:"encrypted_wallet"`
 	// Salt is the salt used to derived the wallet's encryption key in base58 encoding.
 	Salt string `json:"salt"`
+	// Nonce is the nonce used to encrypt the wallet in base58 encoding.
+	Nonce []byte `json:"nonce"`
 }
 
 type WalletStore struct {
 	wk WalletKey
 }
 
-func NewWalletStore(wk *WalletKey) *WalletStore {
+func NewStore(wk *WalletKey) *WalletStore {
 	return &WalletStore{
 		wk: *wk,
 	}
@@ -122,7 +140,7 @@ func (s *WalletStore) Open(path string) (w *Wallet, err error) {
 	}
 	s.wk.salt = base58.Decode(ew.Salt) // Replace auto-generated salt with the one from the wallet file.
 	encWallet := base58.Decode(ew.EncryptedWallet)
-	decWallet := s.wk.decrypt(encWallet)
+	decWallet := s.wk.decrypt(encWallet, ew.Nonce)
 	if err := gob.NewDecoder(bytes.NewReader(decWallet)).Decode(w); err != nil {
 		return nil, err
 	}
@@ -130,10 +148,11 @@ func (s *WalletStore) Open(path string) (w *Wallet, err error) {
 }
 
 func (s *WalletStore) Export(path string, w *Wallet) error {
-	encWallet := s.wk.encrypt(w.ToBytes())
+	encWallet, nonce := s.wk.encrypt(w.ToBytes())
 	ew := &ExportableWallet{
 		Salt:            base58.Encode(s.wk.salt),
 		EncryptedWallet: base58.Encode(encWallet),
+		Nonce:           nonce,
 	}
 	jsonWallet, err := json.Marshal(ew)
 	if err != nil {

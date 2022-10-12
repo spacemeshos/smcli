@@ -12,7 +12,7 @@ func TestHDPathToString(t *testing.T) {
 	assert.Equal(t, "m/44'/540'/0/0/0", s)
 }
 
-func TestStringHDPath(t *testing.T) {
+func TestStringToHDPath(t *testing.T) {
 	testVectors := []struct {
 		path     string
 		expected wallet.HDPath

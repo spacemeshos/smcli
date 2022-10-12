@@ -26,10 +26,10 @@ to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		password, err := password.Read(os.Stdin)
 		cobra.CheckErr(err)
-		wk := wallet.NewWalletKey(
-			wallet.WithPassword(password),
+		wk := wallet.NewKey(
+			wallet.WithArgon2idPassword(password),
 		)
-		ws := wallet.NewWalletStore(wk)
+		ws := wallet.NewStore(wk)
 		e, _ := bip39.NewEntropy(256)
 		m, _ := bip39.NewMnemonic(e)
 		w := wallet.WalletFromMnemonic(m)
