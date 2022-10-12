@@ -2,7 +2,6 @@ package wallet
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/spf13/cobra"
 	"github.com/tyler-smith/go-bip39"
@@ -12,7 +11,6 @@ import (
 type Wallet struct {
 	mnemonic      string
 	masterKeyPair *BIP32EDKeyPair
-	lock          sync.Mutex
 }
 
 // WalletFromMnemonic creates a new wallet from the given mnemonic.
@@ -35,8 +33,6 @@ func WalletFromMnemonic(mnemonic string) *Wallet {
 	return w
 }
 func (w *Wallet) Mnemonic() string {
-	w.lock.Lock()
-	defer w.lock.Unlock()
 	return w.mnemonic
 }
 func (w *Wallet) ToBytes() []byte {
@@ -46,8 +42,6 @@ func (w *Wallet) ToBytes() []byte {
 // KeyPair returns the key pair for the given HDPath.
 // It will compute it every time from the mater key.
 func (w *Wallet) ComputeKeyPair(path HDPath) (*BIP32EDKeyPair, error) {
-	w.lock.Lock()
-	defer w.lock.Unlock()
 	if !IsPathCompletelyHardened(path) {
 		return nil, fmt.Errorf("unhardened keys aren't supported: path must be completely hardened" +
 			" until the new Child Key Derivation function is implemented")
