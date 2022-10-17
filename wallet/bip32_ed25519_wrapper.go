@@ -22,6 +22,14 @@ const BIP32HardenedKeyStart uint32 = 0x80000000
 var ErrInvalidSeed = errors.New("invalid seed length")
 var ErrNotHardened = errors.New("child index must be hardened")
 
+const (
+	HDPurposeSegment  = 0
+	HDCoinTypeSegment = 1
+	HDAccountSegment  = 2
+	HDChainSegment    = 3
+	HDIndexSegment    = 4
+)
+
 type HDPath []uint32
 
 func (p HDPath) String() string {
@@ -29,19 +37,19 @@ func (p HDPath) String() string {
 }
 
 func (p HDPath) Purpose() uint32 {
-	return p[0]
+	return p[HDPurposeSegment]
 }
 func (p HDPath) CoinType() uint32 {
-	return p[1]
+	return p[HDCoinTypeSegment]
 }
 func (p HDPath) Account() uint32 {
-	return p[2]
+	return p[HDAccountSegment]
 }
 func (p HDPath) Chain() uint32 {
-	return p[3]
+	return p[HDChainSegment]
 }
 func (p HDPath) Index() uint32 {
-	return p[4]
+	return p[HDIndexSegment]
 }
 
 type BIP32EDKeyPair struct {
@@ -68,18 +76,19 @@ func NewMasterBIP32EDKeyPair(seed []byte) (*BIP32EDKeyPair, error) {
 	}, nil
 }
 
-func (kp *BIP32EDKeyPair) NewChildKeyPair(childIdx uint32) (BIP32EDKeyPair, error) {
+func (kp *BIP32EDKeyPair) NewChildKeyPair(childIdx uint32) (*BIP32EDKeyPair, error) {
 	if childIdx < BIP32HardenedKeyStart {
-		return BIP32EDKeyPair{}, ErrNotHardened
+		return nil, ErrNotHardened
 	}
 	privKey := ed25519.NewDerivedKeyFromSeed(
 		kp.Private.Seed(),
 		uint64(childIdx),
 		kp.Salt,
 	)
-	return BIP32EDKeyPair{
+	return &BIP32EDKeyPair{
 		Private: privKey,
 		Public:  privKey.Public().(ed25519.PublicKey),
 		Path:    append(kp.Path, childIdx),
+		Salt:    kp.Salt,
 	}, nil
 }

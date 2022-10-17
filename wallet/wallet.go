@@ -34,6 +34,9 @@ func WalletFromMnemonic(mnemonic string) *Wallet {
 	}
 	return w
 }
+func (w *Wallet) Salt() []byte {
+	return w.masterKeyPair.Salt
+}
 func (w *Wallet) Mnemonic() string {
 	return w.mnemonic
 }
@@ -43,26 +46,27 @@ func (w *Wallet) ToBytes() []byte {
 
 // KeyPair returns the key pair for the given HDPath.
 // It will compute it every time from the mater key.
+// If the path is empty, it will return the master key pair.
 func (w *Wallet) ComputeKeyPair(path HDPath) (*BIP32EDKeyPair, error) {
 	if !IsPathCompletelyHardened(path) {
 		return nil, fmt.Errorf("unhardened keys aren't supported: path must be completely hardened" +
-			" until the new Child Key Derivation function is implemented")
+			" until a homomorphic Child Key Derivation function is implemented")
 	}
-	if path.Purpose() != BIP44Purpose() {
-		panic("invalid path: purpose is not BIP44 (44)")
-	}
-	purpose, err := w.masterKeyPair.NewChildKeyPair(BIP44Purpose())
-	cobra.CheckErr(err)
-	if path.CoinType() != BIP44SpacemeshCoinType() {
-		panic("invalid path: coin type is not spacemesh (540)")
-	}
-	cointype, err := purpose.NewChildKeyPair(BIP44SpacemeshCoinType())
 
-	acct, err := cointype.NewChildKeyPair(path.Account())
-	cobra.CheckErr(err)
-	chain, err := acct.NewChildKeyPair(path.Chain())
-	cobra.CheckErr(err)
-	index, err := chain.NewChildKeyPair(path.Index())
-	cobra.CheckErr(err)
-	return &index, nil
+	keypair := w.masterKeyPair
+
+	for i, childKeyIndex := range path {
+		if i == HDPurposeSegment && childKeyIndex != BIP44Purpose() {
+			return nil, fmt.Errorf("invalid purpose: expected %d, got %d", BIP44Purpose(), childKeyIndex)
+		}
+		if i == HDCoinTypeSegment && childKeyIndex != BIP44SpacemeshCoinType() {
+			return nil, fmt.Errorf("invalid coin type: expected %d, got %d", BIP44SpacemeshCoinType(), childKeyIndex)
+		}
+		kp, err := keypair.NewChildKeyPair(childKeyIndex)
+		if err != nil {
+			return nil, err
+		}
+		keypair = kp
+	}
+	return keypair, nil
 }
