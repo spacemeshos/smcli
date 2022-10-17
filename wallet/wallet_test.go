@@ -31,9 +31,9 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 	keyPair, err := w.ComputeKeyPair(keyPath)
 	assert.NoError(t, err)
 	expPubKey :=
-		"c177dee3e454b2505f9a511155aad4afe8fea227db189b3aaaa9b092fe45567b"
+		"205d8d4e458b163d5ba15ac712951d5659cc51379e7e0ad13acc97303aa85093"
 	expPrivKey :=
-		"628d5cb651f8c0d4139dfd5fe97079c66c20452e3e2a8b7b4b6c5fc56c6c3e3ec177dee3e454b2505f9a511155aad4afe8fea227db189b3aaaa9b092fe45567b"
+		"669d091195f950e6255a2e8778eea7be4f7a66afe855957404ec1520c8a11ff1205d8d4e458b163d5ba15ac712951d5659cc51379e7e0ad13acc97303aa85093"
 
 	actualPubKey := hex.EncodeToString(keyPair.Public)
 	actualPrivKey := hex.EncodeToString(keyPair.Private)
@@ -68,6 +68,23 @@ func TestKeysInWalletMaintainExpectedPath(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, keyPair.Path, path)
 	}
+}
+
+func TestKeysInWalletMaintainSalt(t *testing.T) {
+	entropy, _ := bip39.NewEntropy(256)
+	mnemonic, _ := bip39.NewMnemonic(entropy)
+	w := wallet.WalletFromMnemonic(mnemonic)
+	fmt.Println(string(w.Salt()))
+
+	path, _ := wallet.StringToHDPath("m/44'/540'")
+	keyPair, err := w.ComputeKeyPair(path)
+	assert.NoError(t, err)
+	assert.Equal(t, keyPair.Salt, w.Salt())
+	// ... and try with a different length path
+	path, _ = wallet.StringToHDPath("m/44'/540'/0'")
+	keyPair, err = w.ComputeKeyPair(path)
+	assert.NoError(t, err)
+	assert.Equal(t, keyPair.Salt, w.Salt())
 }
 
 func TestComputeKeyPairFailsForUnhardenedPathSegment(t *testing.T) {
