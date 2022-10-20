@@ -3,10 +3,9 @@ package wallet
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
+	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/json"
-	"io"
 	"os"
 
 	"github.com/alexedwards/argon2id"
@@ -51,12 +50,13 @@ func NewKey(opts ...WalletKeyOpt) *WalletKey {
 }
 
 // Complies with FIPS-140
-func WithPbkdf2Password(password string) WalletKeyOpt {
+func WithPbkdf2Password(password []byte, salt [Pdkdf2SaltBytesLen]byte) WalletKeyOpt {
 	return func(k *WalletKey) {
-		k.salt = make([]byte, Pdkdf2SaltBytesLen)
-		_, err := rand.Read(k.salt)
-		cobra.CheckErr(err)
-		k.key = pbkdf2.Key([]byte(password), k.salt,
+		if k.salt != nil || k.key != nil {
+			panic("Can only generate key once.")
+		}
+		k.salt = salt[:]
+		k.key = pbkdf2.Key(password, k.salt,
 			Pbkdf2Itterations,
 			EncKeyLen,
 			Pbkdf2HashFunc,
@@ -67,6 +67,9 @@ func WithPbkdf2Password(password string) WalletKeyOpt {
 // Is better, but not FIPS-140 compliant.
 func WithArgon2idPassword(password string) WalletKeyOpt {
 	return func(k *WalletKey) {
+		if k.salt != nil || k.key != nil {
+			panic("Can only generate key once.")
+		}
 		hash, err := argon2id.CreateHash(password, Argon2idParams)
 		cobra.CheckErr(err)
 		_, salt, key, err := argon2id.DecodeHash(hash)
@@ -77,28 +80,36 @@ func WithArgon2idPassword(password string) WalletKeyOpt {
 }
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html#71-encryption-types-to-use
-func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte) {
+func (k *WalletKey) Encrypt(plaintext []byte) (ciphertext []byte, nonce []byte) {
+	// Notes:
+	// - Not constant time unless making use of hardware.
+	// - The key length is defined by EncKeyLen above.
 	block, err := aes.NewCipher(k.key)
 	cobra.CheckErr(err)
-	// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
-	// TODO: Remind user to not use the same password to encrypt 4 billion times.
-	nonce = make([]byte, 12)
-	_, err = io.ReadFull(rand.Reader, nonce)
-	cobra.CheckErr(err)
+
+	// Using default options for AES-GCM as recommended by the godoc.
+	// For reference, NonceSize is 12 bytes, and TagSize is 16 bytes:
+	// https://cs.opensource.google/go/go/+/refs/tags/go1.19.2:src/crypto/cipher/gcm.go;l=153-158
 	aesgcm, err := cipher.NewGCM(block)
+	nonce = make([]byte, aesgcm.NonceSize())
+
+	hmac := hmac.New(sha512.New, k.key)
+	hmac.Write(plaintext)
+	nonce = hmac.Sum(nil)[:aesgcm.NonceSize()]
 	cobra.CheckErr(err)
 	ciphertext = aesgcm.Seal(nil, nonce, plaintext, nil)
 	return ciphertext, nonce
 }
-func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte) {
+
+func (k *WalletKey) Decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, err error) {
 	block, err := aes.NewCipher(k.key)
 	cobra.CheckErr(err)
 	aesgcm, err := cipher.NewGCM(block)
 	cobra.CheckErr(err)
-	plaintext, err = aesgcm.Open(nil, nonce, ciphertext, nil)
-	cobra.CheckErr(err)
-
-	return plaintext
+	if plaintext, err = aesgcm.Open(nil, nonce, ciphertext, nil); err != nil {
+		return nil, err
+	}
+	return plaintext, nil
 }
 
 type WalletOpener interface {
@@ -141,13 +152,16 @@ func (s *WalletStore) Open(file *os.File) (w *Wallet, err error) {
 	}
 	s.wk.salt = base58.Decode(ew.Salt) // Replace auto-generated salt with the one from the wallet file.
 	encWallet := base58.Decode(ew.EncryptedWallet)
-	decMnemonic := s.wk.decrypt(encWallet, ew.Nonce)
+	decMnemonic, err := s.wk.Decrypt(encWallet, ew.Nonce)
+	if err != nil {
+		return nil, err
+	}
 	w = WalletFromMnemonic(string(decMnemonic))
 	return w, nil
 }
 
 func (s *WalletStore) Export(file *os.File, w *Wallet) error {
-	encWallet, nonce := s.wk.encrypt([]byte(w.Mnemonic()))
+	encWallet, nonce := s.wk.Encrypt([]byte(w.Mnemonic()))
 	ew := &ExportableWallet{
 		Salt:            base58.Encode(s.wk.salt),
 		EncryptedWallet: base58.Encode(encWallet),
