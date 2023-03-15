@@ -2,10 +2,10 @@ package wallet
 
 import (
 	"fmt"
+	"github.com/tyler-smith/go-bip39"
 
 	"github.com/spacemeshos/ed25519"
 	"github.com/spf13/cobra"
-	"github.com/tyler-smith/go-bip39"
 )
 
 // Wallet is a collection of accounts.
@@ -45,7 +45,7 @@ func (w *Wallet) ToBytes() []byte {
 }
 
 // KeyPair returns the key pair for the given HDPath.
-// It will compute it every time from the mater key.
+// It will compute it every time from the master key.
 // If the path is empty, it will return the master key pair.
 func (w *Wallet) ComputeKeyPair(path HDPath) (*BIP32EDKeyPair, error) {
 	if !IsPathCompletelyHardened(path) {

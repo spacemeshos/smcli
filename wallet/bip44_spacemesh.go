@@ -59,7 +59,6 @@ func IsPathCompletelyHardened(path HDPath) bool {
 func HDPathToString(path HDPath) string {
 	s := "m"
 	for _, p := range path {
-
 		if p > BIP32HardenedKeyStart {
 			s += "/" + fmt.Sprint(p-BIP32HardenedKeyStart) + "'"
 		} else {
@@ -76,7 +75,7 @@ func parseUint(s string) uint {
 }
 
 // StringToHDPath converts a BIP44 HD path string of the form
-// (m/44'/540'/account'/chain'/address_index') to it's uint32 slice representation
+// (m/44'/540'/account'/chain'/address_index') to its uint32 slice representation
 func StringToHDPath(s string) (HDPath, error) {
 	// regex of the form m/44'/540'/account'/chain'/address_index'
 	rWholePath := regexp.MustCompile(`^m(\/\d+'?)+$`)
