@@ -18,6 +18,7 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/spacemeshos/go-ledger-sdk v0.0.0-20230318035731-ee5b4a7c6c47 // indirect
 	github.com/spacemeshos/go-scale v0.0.0-20220825080931-832050018560 // indirect
 	github.com/spacemeshos/go-spacemesh v0.1.45 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
