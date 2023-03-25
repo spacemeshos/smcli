@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/spacemeshos/smcli/util"
 
@@ -43,6 +44,10 @@ func SystemType() string {
 	default:
 		panic(fmt.Sprintf("unsupported os: %s", os))
 	}
+}
+
+func nowTimeString() string {
+	return time.Now().UTC().Format("2006-01-02T15-04-05.000") + "Z"
 }
 
 // .spacemesh
@@ -91,7 +96,7 @@ func StateFile() string {
 	return filepath.Join(DotDirectory(), "state.json")
 }
 func WalletFile() string {
-	return filepath.Join(DotDirectory(), "wallet.json")
+	return filepath.Join(DotDirectory(), "wallet_"+nowTimeString()+".json")
 }
 func LogDirectory() string {
 	return filepath.Join(DotDirectory(), "logs")
@@ -114,7 +119,6 @@ func OpenNodeLogFile() (*os.File, error) {
 }
 
 func InitNodeConfig(filePath string) {
-
 	type NetworkDiscoveryResp []struct {
 		NetName              string `json:"netName"`
 		NetID                int    `json:"netID"`

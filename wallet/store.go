@@ -18,7 +18,7 @@ import (
 const EncKeyLen = 32
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
-const Pbkdf2Itterations = 120000
+const Pbkdf2Iterations = 120000
 const Pdkdf2SaltBytesLen = 16
 
 var Pbkdf2HashFunc = sha512.New
@@ -57,7 +57,7 @@ func WithPbkdf2Password(password string) WalletKeyOpt {
 		_, err := rand.Read(k.salt)
 		cobra.CheckErr(err)
 		k.key = pbkdf2.Key([]byte(password), k.salt,
-			Pbkdf2Itterations,
+			Pbkdf2Iterations,
 			EncKeyLen,
 			Pbkdf2HashFunc,
 		)
