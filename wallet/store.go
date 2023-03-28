@@ -3,10 +3,10 @@ package wallet
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha512"
 	"encoding/json"
-	"io"
 	"os"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -59,25 +59,30 @@ func WithPbkdf2Password(password string) WalletKeyOpt {
 func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte) {
 	block, err := aes.NewCipher(k.key)
 	cobra.CheckErr(err)
-	// Never use more than 2^32 random nonces with a given key because of the risk of a repeat.
-	// TODO: Remind user to not use the same password to encrypt 4 billion times.
-	nonce = make([]byte, 12)
-	_, err = io.ReadFull(rand.Reader, nonce)
-	cobra.CheckErr(err)
+
+	// Using default options for AES-GCM as recommended by the godoc.
+	// For reference, NonceSize is 12 bytes, and TagSize is 16 bytes:
+	// https://cs.opensource.google/go/go/+/refs/tags/go1.19.2:src/crypto/cipher/gcm.go;l=153-158
 	aesgcm, err := cipher.NewGCM(block)
+	nonce = make([]byte, aesgcm.NonceSize())
+	hash := hmac.New(sha512.New, k.key)
+	hash.Write(plaintext)
+	nonce = hash.Sum(nil)[:aesgcm.NonceSize()]
+
 	cobra.CheckErr(err)
 	ciphertext = aesgcm.Seal(nil, nonce, plaintext, nil)
 	return ciphertext, nonce
 }
-func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte) {
+func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, err error) {
 	block, err := aes.NewCipher(k.key)
 	cobra.CheckErr(err)
 	aesgcm, err := cipher.NewGCM(block)
 	cobra.CheckErr(err)
-	plaintext, err = aesgcm.Open(nil, nonce, ciphertext, nil)
-	cobra.CheckErr(err)
 
-	return plaintext
+	if plaintext, err = aesgcm.Open(nil, nonce, ciphertext, nil); err != nil {
+		return nil, err
+	}
+	return plaintext, nil
 }
 
 type WalletOpener interface {
@@ -117,7 +122,10 @@ func (s *WalletStore) Open(file *os.File) (w *Wallet, err error) {
 	}
 	s.wk.salt = base58.Decode(ew.Salt) // Replace auto-generated salt with the one from the wallet file.
 	encWallet := base58.Decode(ew.EncryptedWallet)
-	decMnemonic := s.wk.decrypt(encWallet, ew.Nonce)
+	decMnemonic, err := s.wk.decrypt(encWallet, ew.Nonce)
+	if err != nil {
+		return nil, err
+	}
 	w = NewWalletFromMnemonic(string(decMnemonic))
 	return w, nil
 }
