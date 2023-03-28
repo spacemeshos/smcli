@@ -28,7 +28,6 @@ func TestNewMasterBIP32EDKeyPair(t *testing.T) {
 	assert.True(t, valid)
 
 	extracted_pub, err := ed25519.ExtractPublicKey(msg, sig)
-	assert.NoError(t, err)
 	assert.Equal(t, masterKeyPair.Public, extracted_pub)
 }
 
@@ -46,6 +45,5 @@ func TestNewChildKeyPair(t *testing.T) {
 	assert.True(t, valid)
 
 	extracted_pub, err := ed25519.ExtractPublicKey(msg, sig)
-	assert.NoError(t, err)
 	assert.Equal(t, childKeyPair.Public, extracted_pub)
 }
