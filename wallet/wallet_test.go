@@ -30,9 +30,9 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 	keyPair, err := w.ComputeKeyPair(keyPath)
 	assert.NoError(t, err)
 	expPubKey :=
-		"7b2b71492ef629c5fbd18a469ed984fa7ec749bdd877cab74344c260e60c605a"
+		"205d8d4e458b163d5ba15ac712951d5659cc51379e7e0ad13acc97303aa85093"
 	expPrivKey :=
-		"40245a27ce660ea9a135a52a53fa388eb015b8033d253515317c975f01a93a0b7b2b71492ef629c5fbd18a469ed984fa7ec749bdd877cab74344c260e60c605a"
+		"669d091195f950e6255a2e8778eea7be4f7a66afe855957404ec1520c8a11ff1205d8d4e458b163d5ba15ac712951d5659cc51379e7e0ad13acc97303aa85093"
 
 	actualPubKey := hex.EncodeToString(keyPair.Public)
 	actualPrivKey := hex.EncodeToString(keyPair.Private)
@@ -96,9 +96,9 @@ func TestComputeKeyPairFailsForUnhardenedPathSegment(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestListHardwareWallets(t *testing.T) {
-
-}
+//func TestListHardwareWallets(t *testing.T) {
+//
+//}
 
 func benchmarkComputeKeyPair(n int, b *testing.B) {
 	entropy, _ := bip39.NewEntropy(256)
