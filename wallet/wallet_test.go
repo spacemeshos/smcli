@@ -31,9 +31,9 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 	keyPair, err := w.ComputeKeyPair(keyPath)
 	assert.NoError(t, err)
 	expPubKey :=
-		"205d8d4e458b163d5ba15ac712951d5659cc51379e7e0ad13acc97303aa85093"
+		"bcff3c1dd29d957c4352c81eb47cc319da6c0d325ceecd9f5d7250c27b90dce5"
 	expPrivKey :=
-		"669d091195f950e6255a2e8778eea7be4f7a66afe855957404ec1520c8a11ff1205d8d4e458b163d5ba15ac712951d5659cc51379e7e0ad13acc97303aa85093"
+		"e41f484eeb9c810696b501bbe4955b7c5920d30f04afe86e747d3d012973d82dbcff3c1dd29d957c4352c81eb47cc319da6c0d325ceecd9f5d7250c27b90dce5"
 
 	actualPubKey := hex.EncodeToString(keyPair.Public)
 	actualPrivKey := hex.EncodeToString(keyPair.Private)
