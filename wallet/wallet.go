@@ -3,7 +3,7 @@ package wallet
 import (
 	"fmt"
 
-	"github.com/spacemeshos/ed25519"
+	"github.com/spacemeshos/ed25519-recovery"
 	"github.com/spf13/cobra"
 	"github.com/tyler-smith/go-bip39"
 )

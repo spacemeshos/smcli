@@ -3,7 +3,7 @@ package wallet_test
 import (
 	"crypto/ed25519"
 
-	ed25519_sm "github.com/spacemeshos/ed25519"
+	ed25519_sm "github.com/spacemeshos/ed25519-recovery"
 
 	"encoding/hex"
 	"fmt"
@@ -50,8 +50,8 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 	assert.True(t, ed25519_sm.Verify(keyPair.Public, msg, sig))
 
 	// Sanity check that the keypair works with the extended spacemesh ed25519 impl
-	sig = ed25519_sm.Sign2(keyPair.Private, msg)
-	assert.True(t, ed25519_sm.Verify2(keyPair.Public, msg, sig))
+	sig = ed25519_sm.Sign(keyPair.Private, msg)
+	assert.True(t, ed25519_sm.Verify(keyPair.Public, msg, sig))
 	extractedPubKey, err := ed25519_sm.ExtractPublicKey(msg, sig)
 	assert.NoError(t, err)
 	assert.Equal(t, keyPair.Public, extractedPubKey)

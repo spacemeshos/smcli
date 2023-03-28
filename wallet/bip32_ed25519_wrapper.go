@@ -3,7 +3,7 @@ package wallet
 import (
 	"errors"
 
-	"github.com/spacemeshos/ed25519"
+	"github.com/spacemeshos/ed25519-recovery"
 )
 
 // BIP32HardenedKeyStart: keys with index >= this must be hardened as per BIP32.
