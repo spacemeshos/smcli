@@ -19,6 +19,7 @@ const EncKeyLen = 32
 // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
 // TODO: should this be increased to 210,000 per the above link?
 const Pbkdf2Iterations = 120000
+const Pbkdf2Dklen = 256
 const Pdkdf2SaltBytesLen = 16
 
 var Pbkdf2HashFunc = sha512.New
@@ -85,33 +86,33 @@ func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, 
 	return plaintext, nil
 }
 
-type WalletOpener interface {
-	Open(path string) (*Wallet, error)
-}
-type WalletExporter interface {
-	Export(path string) error
-}
-
-type ExportableWallet struct {
-	// EncryptedWallet is the encrypted wallet data in base58 encoding.
-	EncryptedWallet string `json:"encrypted_wallet"`
-	// Salt is the salt used to derived the wallet's encryption key in base58 encoding.
-	Salt string `json:"salt"`
-	// Nonce is the nonce used to encrypt the wallet in base58 encoding.
-	Nonce []byte `json:"nonce"`
-}
-
-type WalletStore struct {
-	wk WalletKey
-}
-
-func NewStore(wk *WalletKey) *WalletStore {
-	return &WalletStore{
-		wk: *wk,
-	}
-}
-
-func (s *WalletStore) Open(file *os.File) (w *Wallet, err error) {
+//	type WalletOpener interface {
+//		Open(path string) (*Wallet, error)
+//	}
+//
+//	type WalletExporter interface {
+//		Export(path string) error
+//	}
+//
+//	type ExportableWallet struct {
+//		// EncryptedWallet is the encrypted wallet data in base58 encoding.
+//		EncryptedWallet string `json:"encrypted_wallet"`
+//		// Salt is the salt used to derived the wallet's encryption key in base58 encoding.
+//		Salt string `json:"salt"`
+//		// Nonce is the nonce used to encrypt the wallet in base58 encoding.
+//		Nonce []byte `json:"nonce"`
+//	}
+//
+//	type WalletStore struct {
+//		wk WalletKey
+//	}
+//
+//	func NewStore(wk *WalletKey) *WalletStore {
+//		return &WalletStore{
+//			wk: *wk,
+//		}
+//	}
+func Open(file *os.File) (w *Wallet, err error) {
 	jsonWallet, err := os.ReadFile(file.Name())
 	if err != nil {
 		return nil, err
@@ -130,12 +131,35 @@ func (s *WalletStore) Open(file *os.File) (w *Wallet, err error) {
 	return w, nil
 }
 
-func (s *WalletStore) Export(file *os.File, w *Wallet) error {
-	encWallet, nonce := s.wk.encrypt([]byte(w.Mnemonic()))
-	ew := &ExportableWallet{
-		Salt:            base58.Encode(s.wk.salt),
-		EncryptedWallet: base58.Encode(encWallet),
-		Nonce:           nonce,
+func (w *Wallet) Export(ws WalletKey, file *os.File) error {
+	// encrypt the secrets
+	plaintext, err := json.Marshal(w.Secrets)
+	if err != nil {
+		return err
+	}
+	ciphertext, nonce := ws.encrypt(plaintext)
+	ew := &EncryptedWalletFile{
+		Meta: w.Meta,
+		Secrets: walletSecretsEncrypted{
+			Cipher:     "AES-GCM",
+			CipherText: base58.Encode(ciphertext),
+			CipherParams: struct {
+				IV string `json:"iv"`
+				// use hex encoding? base64?
+			}{IV: string(nonce)},
+			KDF: "PBKDF2",
+			KDFParams: struct {
+				DKLen      int    `json:"dklen"`
+				Hash       string `json:"hash"`
+				Salt       string `json:"salt"`
+				Iterations int    `json:"iterations"`
+			}{
+				DKLen:      Pbkdf2Dklen,
+				Hash:       "SHA-256",
+				Salt:       w.Meta.Meta.Salt,
+				Iterations: Pbkdf2Iterations,
+			},
+		},
 	}
 	jsonWallet, err := json.Marshal(ew)
 	if err != nil {
