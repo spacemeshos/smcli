@@ -2,7 +2,6 @@ package wallet_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"testing"
@@ -14,7 +13,7 @@ import (
 
 func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 	wKey := wallet.NewKey(
-		wallet.WithArgon2idPassword("password"),
+		wallet.WithPbkdf2Password("password"),
 	)
 	wStore := wallet.NewStore(wKey)
 
@@ -22,7 +21,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 	mnemonic, _ := bip39.NewMnemonic(entropy)
 	w := wallet.WalletFromMnemonic(mnemonic)
 
-	file, err := ioutil.TempFile("./", "test_wallet.*.json")
+	file, err := os.CreateTemp("./", "test_wallet.*.json")
 	if err != nil {
 		log.Fatal(err)
 	}

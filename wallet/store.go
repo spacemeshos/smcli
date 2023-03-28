@@ -18,6 +18,7 @@ import (
 const EncKeyLen = 32
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
+// TODO: should this be increased to 210,000 per the above link?
 const Pbkdf2Iterations = 120000
 const Pdkdf2SaltBytesLen = 16
 
