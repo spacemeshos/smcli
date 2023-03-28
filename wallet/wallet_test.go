@@ -3,12 +3,11 @@ package wallet_test
 import (
 	"crypto/ed25519"
 
-	ed25519sm "github.com/spacemeshos/ed25519"
-
 	"encoding/hex"
 	"fmt"
 	"testing"
 
+	ed25519sm "github.com/spacemeshos/ed25519"
 	"github.com/spacemeshos/smcli/wallet"
 	"github.com/stretchr/testify/assert"
 	"github.com/tyler-smith/go-bip39"
@@ -31,9 +30,9 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 	keyPair, err := w.ComputeKeyPair(keyPath)
 	assert.NoError(t, err)
 	expPubKey :=
-		"bcff3c1dd29d957c4352c81eb47cc319da6c0d325ceecd9f5d7250c27b90dce5"
+		"7b2b71492ef629c5fbd18a469ed984fa7ec749bdd877cab74344c260e60c605a"
 	expPrivKey :=
-		"e41f484eeb9c810696b501bbe4955b7c5920d30f04afe86e747d3d012973d82dbcff3c1dd29d957c4352c81eb47cc319da6c0d325ceecd9f5d7250c27b90dce5"
+		"40245a27ce660ea9a135a52a53fa388eb015b8033d253515317c975f01a93a0b7b2b71492ef629c5fbd18a469ed984fa7ec749bdd877cab74344c260e60c605a"
 
 	actualPubKey := hex.EncodeToString(keyPair.Public)
 	actualPrivKey := hex.EncodeToString(keyPair.Private)

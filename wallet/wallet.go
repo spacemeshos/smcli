@@ -118,7 +118,7 @@ func NewWallet() *Wallet {
 }
 
 // NewWalletFromMnemonic creates a new wallet from the given mnemonic.
-// the mnemonic must be a valid bip39 mnemonic.
+// The mnemonic must be a valid bip39 mnemonic.
 func NewWalletFromMnemonic(mnemonic string) *Wallet {
 	if !bip39.IsMnemonicValid(mnemonic) {
 		panic("invalid mnemonic")
@@ -131,6 +131,12 @@ func NewWalletFromMnemonic(mnemonic string) *Wallet {
 	// because spacemeshos/ed25519 gets angry if it gets all 64 bytes.
 	// Not sure if this is the correct approach.
 	masterKeyPair, err := NewMasterBIP32EDKeyPair(seed[ed25519.SeedSize:])
+	cobra.CheckErr(err)
+
+	// We only use the master key pair as a seed to generate child addresses.
+	// We don't store the master key pair as an address.
+	// Go ahead and derive the first child address.
+	keyPair, err := masterKeyPair.NewChildKeyPair(BIP44Account(0))
 	cobra.CheckErr(err)
 
 	displayName := "Main Wallet"
@@ -149,7 +155,7 @@ func NewWalletFromMnemonic(mnemonic string) *Wallet {
 		Secrets: walletSecrets{
 			Mnemonic: mnemonic,
 			Accounts: []*BIP32EDKeyPair{
-				masterKeyPair,
+				keyPair,
 			},
 		},
 	}

@@ -1,8 +1,9 @@
 package wallet
 
 import (
+	"crypto/ed25519"
 	"errors"
-	"github.com/spacemeshos/ed25519"
+	ed25519sm "github.com/spacemeshos/ed25519"
 	"github.com/spacemeshos/smcli/common"
 )
 
@@ -67,16 +68,14 @@ func NewMasterBIP32EDKeyPair(seed []byte) (*BIP32EDKeyPair, error) {
 		return nil, ErrInvalidSeed
 	}
 	salt := []byte(common.DefaultEncryptionSalt)
-	privKey := ed25519.NewDerivedKeyFromSeed(seed, 0, salt)
+	privKey := ed25519.NewKeyFromSeed(seed)
 
 	return &BIP32EDKeyPair{
 		Private: privKey,
 		Public:  privKey.Public().(ed25519.PublicKey),
-		Path:    HDPath{},
-		Salt:    salt,
-		// If I understand correctly, we don't want a random salt here
-		// because we want to be able to derive the same key from the same seed
-		// every time.
+		// master key has no path
+		Path: HDPath{},
+		Salt: salt,
 	}, nil
 }
 
@@ -84,7 +83,7 @@ func (kp *BIP32EDKeyPair) NewChildKeyPair(childIdx uint32) (*BIP32EDKeyPair, err
 	if childIdx < BIP32HardenedKeyStart {
 		return nil, ErrNotHardened
 	}
-	privKey := ed25519.NewDerivedKeyFromSeed(
+	privKey := ed25519sm.NewDerivedKeyFromSeed(
 		kp.Private.Seed(),
 		uint64(childIdx),
 		kp.Salt,

@@ -37,7 +37,7 @@ func BIP44HardenedChain(chain uint32) uint32 {
 	return BIP32HardenedKeyStart | chain
 }
 
-// After the Hardened Chain level comes the address indeces, as of now, we don't
+// After the Hardened Chain level comes the address indices, as of now, we don't
 // support un-hardened derivation so we'll continue our deviation from the spec
 // here. All addresses will be hardened.
 // (m/44'/540'/keyPair'/chain'/address_index')
