@@ -9,7 +9,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/alexedwards/argon2id"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/spf13/cobra"
 	"github.com/xdg-go/pbkdf2"
@@ -25,13 +24,13 @@ const Pdkdf2SaltBytesLen = 16
 var Pbkdf2HashFunc = sha512.New
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#argon2id
-var Argon2idParams = &argon2id.Params{
-	Memory:      64 * 1024,
-	Iterations:  3,
-	Parallelism: 4,
-	SaltLength:  16,
-	KeyLength:   EncKeyLen,
-}
+//var Argon2idParams = &argon2id.Params{
+//	Memory:      64 * 1024,
+//	Iterations:  3,
+//	Parallelism: 4,
+//	SaltLength:  16,
+//	KeyLength:   EncKeyLen,
+//}
 
 type WalletKeyOpt func(*WalletKey)
 type WalletKey struct {
@@ -66,16 +65,16 @@ func WithPbkdf2Password(password string) WalletKeyOpt {
 }
 
 // Is better, but not FIPS-140 compliant.
-func WithArgon2idPassword(password string) WalletKeyOpt {
-	return func(k *WalletKey) {
-		hash, err := argon2id.CreateHash(password, Argon2idParams)
-		cobra.CheckErr(err)
-		_, salt, key, err := argon2id.DecodeHash(hash)
-		cobra.CheckErr(err)
-		k.salt = salt
-		k.key = key
-	}
-}
+//func WithArgon2idPassword(password string) WalletKeyOpt {
+//	return func(k *WalletKey) {
+//		hash, err := argon2id.CreateHash(password, Argon2idParams)
+//		cobra.CheckErr(err)
+//		_, salt, key, err := argon2id.DecodeHash(hash)
+//		cobra.CheckErr(err)
+//		k.salt = salt
+//		k.key = key
+//	}
+//}
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html#71-encryption-types-to-use
 func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte) {
