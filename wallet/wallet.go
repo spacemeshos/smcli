@@ -56,6 +56,9 @@ type Wallet struct {
 	Meta    walletMetadata `json:"meta"`
 	Secrets walletSecrets  `json:"crypto"`
 	//Encrypted walletSecretsEncrypted `json:"crypto"`
+
+	// this is not persisted
+	masterKeypair *BIP32EDKeyPair
 }
 
 // EncryptedWalletFile is the encrypted representation of the wallet on the filesystem
@@ -158,6 +161,7 @@ func NewWalletFromMnemonic(mnemonic string) *Wallet {
 				keyPair,
 			},
 		},
+		masterKeypair: masterKeyPair,
 	}
 
 	return w
@@ -181,7 +185,7 @@ func (w *Wallet) ComputeKeyPair(path HDPath) (*BIP32EDKeyPair, error) {
 		return nil, fmt.Errorf("unhardened keys aren't supported")
 	}
 
-	keypair := w.Secrets.Accounts[0]
+	keypair := w.masterKeypair
 
 	for i, childKeyIndex := range path {
 		if i == HDPurposeSegment && childKeyIndex != BIP44Purpose() {
