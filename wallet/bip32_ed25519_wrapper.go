@@ -2,8 +2,8 @@ package wallet
 
 import (
 	"errors"
-
 	"github.com/spacemeshos/ed25519"
+	"github.com/spacemeshos/smcli/common"
 )
 
 // BIP32HardenedKeyStart: keys with index >= this must be hardened as per BIP32.
@@ -53,9 +53,12 @@ func (p HDPath) Index() uint32 {
 }
 
 type BIP32EDKeyPair struct {
-	Private ed25519.PrivateKey
-	Public  ed25519.PublicKey
-	Path    HDPath // we assume the prefix is m/ and all keys are hardened
+	DisplayName string `json:"displayName"`
+	Created     string `json:"created"`
+	// we assume the prefix is m/ and all keys are hardened
+	Path    HDPath             `json:"path"`
+	Public  ed25519.PublicKey  `json:"publicKey"`
+	Private ed25519.PrivateKey `json:"secretKey"`
 	Salt    []byte
 }
 
@@ -63,13 +66,14 @@ func NewMasterBIP32EDKeyPair(seed []byte) (*BIP32EDKeyPair, error) {
 	if len(seed) != ed25519.SeedSize {
 		return nil, ErrInvalidSeed
 	}
-	privKey := ed25519.NewKeyFromSeed(seed)
+	salt := []byte(common.DefaultEncryptionSalt)
+	privKey := ed25519.NewDerivedKeyFromSeed(seed, 0, salt)
 
 	return &BIP32EDKeyPair{
 		Private: privKey,
 		Public:  privKey.Public().(ed25519.PublicKey),
 		Path:    HDPath{},
-		Salt:    []byte("Spacemesh blockmesh"), //TODO: decide on a salt
+		Salt:    salt,
 		// If I understand correctly, we don't want a random salt here
 		// because we want to be able to derive the same key from the same seed
 		// every time.

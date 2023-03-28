@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"fmt"
+	"github.com/spacemeshos/smcli/common"
 	"github.com/tyler-smith/go-bip39"
 
 	"github.com/spacemeshos/ed25519"
@@ -9,51 +10,172 @@ import (
 )
 
 // Wallet is a collection of accounts.
+//type Wallet struct {
+//	mnemonic      string
+//	masterKeyPair *BIP32EDKeyPair
+//}
+
+//type keyPair struct {
+//	DisplayName string             `json:"displayName"`
+//	Created     string             `json:"created"`
+//	Path        HDPath             `json:"path"`
+//	PublicKey   signing.PublicKey  `json:"publicKey"`
+//	SecretKey   signing.PrivateKey `json:"secretKey"`
+//}
+//
+//func (a *keyPair) Address() types.Address {
+//	return types.GenerateAddress(a.PublicKey.Bytes())
+//}
+//
+//func (a *keyPair) PrivateKey() (pub ed25519.PrivateKey, err error) {
+//	return hex.DecodeString(a.SecretKey)
+//}
+
+//func createAccount(
+//	displayName, created string,
+//	path HDPath,
+//	publicKey signing.PublicKey,
+//	secretKey signing.PrivateKey,
+//) keyPair {
+//	return keyPair{
+//		DisplayName: displayName,
+//		Created:     created,
+//		Path:        path,
+//		// this weirdness has something to do with the way pubkeys are derived from
+//		// privkeys
+//		PublicKey: *signing.NewPublicKey(publicKey.Bytes()),
+//		SecretKey: secretKey,
+//	}
+//}
+
+// Wallet is the basic data structure.
 type Wallet struct {
-	mnemonic      string
-	masterKeyPair *BIP32EDKeyPair
+	//keystore string
+	//password string
+	//unlocked bool
+	Meta    walletMetadata `json:"meta"`
+	Secrets walletSecrets  `json:"crypto"`
+	//Encrypted walletSecretsEncrypted `json:"crypto"`
 }
 
-// WalletFromMnemonic creates a new wallet from the given mnemonic.
+// EncryptedWalletFile is the encrypted representation of the wallet on the filesystem
+type EncryptedWalletFile struct {
+	Meta    walletMetadata         `json:"meta"`
+	Secrets walletSecretsEncrypted `json:"crypto"`
+}
+
+type MetaMetadata struct {
+	Salt string `json:"salt"`
+}
+
+type walletMetadata struct {
+	DisplayName string       `json:"displayName"`
+	Created     string       `json:"created"`
+	GenesisID   string       `json:"genesisID"`
+	Meta        MetaMetadata `json:"meta"`
+	//NetID       int    `json:"netId"`
+
+	// is this needed?
+	//Type WalletType
+	//RemoteAPI string
+}
+
+type walletSecretsEncrypted struct {
+	Cipher       string `json:"cipher"`
+	CipherText   string `json:"cipherText"`
+	CipherParams struct {
+		IV string `json:"iv"`
+	} `json:"cipherParams"`
+	KDF       string `json:"kdf"`
+	KDFParams struct {
+		DKLen      int    `json:"dklen"`
+		Hash       string `json:"hash"`
+		Salt       string `json:"salt"`
+		Iterations int    `json:"iterations"`
+	} `json:"kdfparams"`
+}
+
+type walletSecrets struct {
+	Mnemonic string            `json:"mnemonic"`
+	Accounts []*BIP32EDKeyPair `json:"accounts"`
+
+	//accountNumber int
+
+	// supported in smapp, leave out for now for simplicity
+	//Contacts      []contact `json:"contacts"`
+}
+
+//type contact struct {
+//	Nickname string `json:"nickname"`
+//	Address  string `json:"address"`
+//}
+
+// NewWallet creates a brand new wallet with a random mnemonic.
+func NewWallet() *Wallet {
+	e, _ := bip39.NewEntropy(256)
+	m, _ := bip39.NewMnemonic(e)
+	return NewWalletFromMnemonic(m)
+}
+
+// NewWalletFromMnemonic creates a new wallet from the given mnemonic.
 // the mnemonic must be a valid bip39 mnemonic.
-func WalletFromMnemonic(mnemonic string) *Wallet {
+func NewWalletFromMnemonic(mnemonic string) *Wallet {
 	if !bip39.IsMnemonicValid(mnemonic) {
 		panic("invalid mnemonic")
 	}
 	// TODO: add option for user to provide passphrase
+	// https://github.com/spacemeshos/smcli/issues/18
 	seed := bip39.NewSeed(mnemonic, "")
+
 	// Arbitrarily taking the first 32 bytes as the seed for the private key
 	// because spacemeshos/ed25519 gets angry if it gets all 64 bytes.
 	// Not sure if this is the correct approach.
 	masterKeyPair, err := NewMasterBIP32EDKeyPair(seed[ed25519.SeedSize:])
 	cobra.CheckErr(err)
 
+	displayName := "Main Wallet"
+	createTime := common.NowTimeString()
+
 	w := &Wallet{
-		mnemonic:      mnemonic,
-		masterKeyPair: masterKeyPair,
+		Meta: walletMetadata{
+			DisplayName: displayName,
+			Created:     createTime,
+			// TODO: set correctly
+			GenesisID: "",
+			Meta: MetaMetadata{
+				Salt: string(masterKeyPair.Salt),
+			},
+		},
+		Secrets: walletSecrets{
+			Mnemonic: mnemonic,
+			Accounts: []*BIP32EDKeyPair{
+				masterKeyPair,
+			},
+		},
 	}
+
 	return w
 }
 func (w *Wallet) Salt() []byte {
-	return w.masterKeyPair.Salt
+	return []byte(w.Meta.Meta.Salt)
 }
 func (w *Wallet) Mnemonic() string {
-	return w.mnemonic
-}
-func (w *Wallet) ToBytes() []byte {
-	return []byte(w.mnemonic)
+	return w.Secrets.Mnemonic
 }
 
-// KeyPair returns the key pair for the given HDPath.
+//func (w *Wallet) ToBytes() []byte {
+//	return []byte(w.Mnemonic())
+//}
+
+// ComputeKeyPair returns the key pair for the given HDPath.
 // It will compute it every time from the master key.
 // If the path is empty, it will return the master key pair.
 func (w *Wallet) ComputeKeyPair(path HDPath) (*BIP32EDKeyPair, error) {
 	if !IsPathCompletelyHardened(path) {
-		return nil, fmt.Errorf("unhardened keys aren't supported: path must be completely hardened" +
-			" until a homomorphic Child Key Derivation function is implemented")
+		return nil, fmt.Errorf("unhardened keys aren't supported")
 	}
 
-	keypair := w.masterKeyPair
+	keypair := w.Secrets.Accounts[0]
 
 	for i, childKeyIndex := range path {
 		if i == HDPurposeSegment && childKeyIndex != BIP44Purpose() {

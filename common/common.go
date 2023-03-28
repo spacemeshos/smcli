@@ -15,8 +15,9 @@ import (
 )
 
 const (
-	DefaultNodeVersion  = "v0.2.16-beta.0"
-	NetworkDiscoveryUrl = "https://discover.spacemesh.io/networks.json"
+	DefaultNodeVersion    = "v0.2.16-beta.0"
+	NetworkDiscoveryUrl   = "https://discover.spacemesh.io/networks.json"
+	DefaultEncryptionSalt = "Spacemesh blockmesh"
 )
 
 func NodeDownloadUrl() string {
@@ -46,7 +47,7 @@ func SystemType() string {
 	}
 }
 
-func nowTimeString() string {
+func NowTimeString() string {
 	return time.Now().UTC().Format("2006-01-02T15-04-05.000") + "Z"
 }
 
@@ -96,7 +97,7 @@ func StateFile() string {
 	return filepath.Join(DotDirectory(), "state.json")
 }
 func WalletFile() string {
-	return filepath.Join(DotDirectory(), "wallet_"+nowTimeString()+".json")
+	return filepath.Join(DotDirectory(), "wallet_"+NowTimeString()+".json")
 }
 func LogDirectory() string {
 	return filepath.Join(DotDirectory(), "logs")

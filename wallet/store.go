@@ -142,7 +142,7 @@ func (s *WalletStore) Open(file *os.File) (w *Wallet, err error) {
 	s.wk.salt = base58.Decode(ew.Salt) // Replace auto-generated salt with the one from the wallet file.
 	encWallet := base58.Decode(ew.EncryptedWallet)
 	decMnemonic := s.wk.decrypt(encWallet, ew.Nonce)
-	w = WalletFromMnemonic(string(decMnemonic))
+	w = NewWalletFromMnemonic(string(decMnemonic))
 	return w, nil
 }
 

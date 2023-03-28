@@ -6,7 +6,6 @@ package cmd
 import (
 	"bufio"
 	"fmt"
-	"github.com/tyler-smith/go-bip39"
 	"log"
 	"os"
 
@@ -33,14 +32,12 @@ to quickly create a Cobra application.`,
 		var w *wallet.Wallet
 		// TODO: check if we see \r\n on windows
 		if text == "\n" {
-			e, _ := bip39.NewEntropy(256)
-			m, _ := bip39.NewMnemonic(e)
-			w = wallet.WalletFromMnemonic(m)
+			w = wallet.NewWallet()
 			fmt.Println("SAVE THIS MNEMONIC IN A SAFE PLACE!")
-			fmt.Println(m)
+			fmt.Println(w.Mnemonic())
 		} else {
 			// try to use as a mnemonic
-			w = wallet.WalletFromMnemonic(text)
+			w = wallet.NewWalletFromMnemonic(text)
 		}
 
 		fmt.Print("Enter a secure password (optional but strongly recommended): ")

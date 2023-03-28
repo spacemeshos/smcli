@@ -3,7 +3,7 @@ package wallet_test
 import (
 	"crypto/ed25519"
 
-	ed25519_sm "github.com/spacemeshos/ed25519"
+	ed25519sm "github.com/spacemeshos/ed25519"
 
 	"encoding/hex"
 	"fmt"
@@ -17,7 +17,7 @@ import (
 func TestWalletFromNewMnemonic(t *testing.T) {
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
-	w := wallet.WalletFromMnemonic(mnemonic)
+	w := wallet.NewWalletFromMnemonic(mnemonic)
 
 	assert.NotNil(t, w)
 	assert.Equal(t, mnemonic, w.Mnemonic())
@@ -25,7 +25,7 @@ func TestWalletFromNewMnemonic(t *testing.T) {
 
 func TestWalletFromGivenMnemonic(t *testing.T) {
 	mnemonic := "film theme cheese broken kingdom destroy inch ready wear inspire shove pudding"
-	w := wallet.WalletFromMnemonic(mnemonic)
+	w := wallet.NewWalletFromMnemonic(mnemonic)
 	keyPath, err := wallet.StringToHDPath("m/44'/540'/0'/0'/0'")
 	assert.NoError(t, err)
 	keyPair, err := w.ComputeKeyPair(keyPath)
@@ -42,17 +42,18 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 
 	msg := []byte("hello world")
 	// Sanity check that the keypair works with the standard ed25519 library
-	sig := ed25519.Sign(ed25519.PrivateKey(keyPair.Private), msg)
-	assert.True(t, ed25519.Verify(ed25519.PublicKey(keyPair.Public), msg, sig))
+	sig := ed25519.Sign(keyPair.Private, msg)
+	assert.True(t, ed25519.Verify(keyPair.Public, msg, sig))
 
 	// Sanity check that the keypair works with the spacemesh ed25519 impl
-	sig = ed25519_sm.Sign(keyPair.Private, msg)
-	assert.True(t, ed25519_sm.Verify(keyPair.Public, msg, sig))
+	sig = ed25519sm.Sign(keyPair.Private, msg)
+	assert.True(t, ed25519sm.Verify(keyPair.Public, msg, sig))
 
 	// Sanity check that the keypair works with the extended spacemesh ed25519 impl
-	sig = ed25519_sm.Sign2(keyPair.Private, msg)
-	assert.True(t, ed25519_sm.Verify2(keyPair.Public, msg, sig))
-	extractedPubKey, err := ed25519_sm.ExtractPublicKey(msg, sig)
+	// TODO: drop this?
+	sig = ed25519sm.Sign2(keyPair.Private, msg)
+	assert.True(t, ed25519sm.Verify2(keyPair.Public, msg, sig))
+	extractedPubKey, err := ed25519sm.ExtractPublicKey(msg, sig)
 	assert.NoError(t, err)
 	assert.Equal(t, keyPair.Public, extractedPubKey)
 }
@@ -60,7 +61,7 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 func TestKeysInWalletMaintainExpectedPath(t *testing.T) {
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
-	w := wallet.WalletFromMnemonic(mnemonic)
+	w := wallet.NewWalletFromMnemonic(mnemonic)
 
 	for i := 0; i < 100; i++ {
 		path, _ := wallet.StringToHDPath(fmt.Sprintf("m/44'/540'/%d'/%d'/%d'", i, i, i))
@@ -73,7 +74,7 @@ func TestKeysInWalletMaintainExpectedPath(t *testing.T) {
 func TestKeysInWalletMaintainSalt(t *testing.T) {
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
-	w := wallet.WalletFromMnemonic(mnemonic)
+	w := wallet.NewWalletFromMnemonic(mnemonic)
 	fmt.Println(string(w.Salt()))
 
 	path, _ := wallet.StringToHDPath("m/44'/540'")
@@ -90,7 +91,7 @@ func TestKeysInWalletMaintainSalt(t *testing.T) {
 func TestComputeKeyPairFailsForUnhardenedPathSegment(t *testing.T) {
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
-	w := wallet.WalletFromMnemonic(mnemonic)
+	w := wallet.NewWalletFromMnemonic(mnemonic)
 	path, _ := wallet.StringToHDPath("m/44'/540'/0'/0'/0")
 	_, err := w.ComputeKeyPair(path)
 	assert.Error(t, err)
@@ -103,7 +104,7 @@ func TestListHardwareWallets(t *testing.T) {
 func benchmarkComputeKeyPair(n int, b *testing.B) {
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
-	w := wallet.WalletFromMnemonic(mnemonic)
+	w := wallet.NewWalletFromMnemonic(mnemonic)
 	for i := 0; i < b.N; i++ { // benchmark-controlled loop
 		for j := 0; j < n; j++ { // specified number of iterations
 			path, _ := wallet.StringToHDPath(fmt.Sprintf("m/44'/540'/0'/0'/%d'", j))
