@@ -83,6 +83,10 @@ func (kp *BIP32EDKeyPair) NewChildKeyPair(childIdx uint32) (*BIP32EDKeyPair, err
 	if childIdx < BIP32HardenedKeyStart {
 		return nil, ErrNotHardened
 	}
+
+	// We still need to use the extended library for this, since the core library doesn't
+	// support this operation natively. Ideally we'd use a reliable, standard BIP32 derivation
+	// library for this, but I couldn't find one.
 	privKey := ed25519sm.NewDerivedKeyFromSeed(
 		kp.Private.Seed(),
 		uint64(childIdx),

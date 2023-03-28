@@ -23,15 +23,6 @@ const Pdkdf2SaltBytesLen = 16
 
 var Pbkdf2HashFunc = sha512.New
 
-// https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#argon2id
-//var Argon2idParams = &argon2id.Params{
-//	Memory:      64 * 1024,
-//	Iterations:  3,
-//	Parallelism: 4,
-//	SaltLength:  16,
-//	KeyLength:   EncKeyLen,
-//}
-
 type WalletKeyOpt func(*WalletKey)
 type WalletKey struct {
 	key  []byte
@@ -63,18 +54,6 @@ func WithPbkdf2Password(password string) WalletKeyOpt {
 		)
 	}
 }
-
-// Is better, but not FIPS-140 compliant.
-//func WithArgon2idPassword(password string) WalletKeyOpt {
-//	return func(k *WalletKey) {
-//		hash, err := argon2id.CreateHash(password, Argon2idParams)
-//		cobra.CheckErr(err)
-//		_, salt, key, err := argon2id.DecodeHash(hash)
-//		cobra.CheckErr(err)
-//		k.salt = salt
-//		k.key = key
-//	}
-//}
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html#71-encryption-types-to-use
 func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte) {
@@ -126,9 +105,6 @@ func NewStore(wk *WalletKey) *WalletStore {
 		wk: *wk,
 	}
 }
-
-// Just a quick storage of the encrypted mnemonic for now.
-// TODO: add metadata, decide what else should actually go in the "core wallet"
 
 func (s *WalletStore) Open(file *os.File) (w *Wallet, err error) {
 	jsonWallet, err := os.ReadFile(file.Name())

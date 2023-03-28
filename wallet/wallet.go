@@ -9,45 +9,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Wallet is a collection of accounts.
-//type Wallet struct {
-//	mnemonic      string
-//	masterKeyPair *BIP32EDKeyPair
-//}
-
-//type keyPair struct {
-//	DisplayName string             `json:"displayName"`
-//	Created     string             `json:"created"`
-//	Path        HDPath             `json:"path"`
-//	PublicKey   signing.PublicKey  `json:"publicKey"`
-//	SecretKey   signing.PrivateKey `json:"secretKey"`
-//}
-//
-//func (a *keyPair) Address() types.Address {
-//	return types.GenerateAddress(a.PublicKey.Bytes())
-//}
-//
-//func (a *keyPair) PrivateKey() (pub ed25519.PrivateKey, err error) {
-//	return hex.DecodeString(a.SecretKey)
-//}
-
-//func createAccount(
-//	displayName, created string,
-//	path HDPath,
-//	publicKey signing.PublicKey,
-//	secretKey signing.PrivateKey,
-//) keyPair {
-//	return keyPair{
-//		DisplayName: displayName,
-//		Created:     created,
-//		Path:        path,
-//		// this weirdness has something to do with the way pubkeys are derived from
-//		// privkeys
-//		PublicKey: *signing.NewPublicKey(publicKey.Bytes()),
-//		SecretKey: secretKey,
-//	}
-//}
-
 // Wallet is the basic data structure.
 type Wallet struct {
 	//keystore string
