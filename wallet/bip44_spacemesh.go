@@ -18,12 +18,12 @@ func BIP44SpacemeshCoinType() uint32 {
 	return 0x8000021c
 }
 
-// After the coin type comes the keyPair (m/44'/540'/keyPair')
+// After the coin type comes the account (m/44'/540'/account')
 func BIP44Account(account uint32) uint32 {
 	return BIP32HardenedKeyStart | account
 }
 
-// After the keyPair comes the change level, BUT as of now, we don't support
+// After the account comes the change level, BUT as of now, we don't support
 // un-hardened derivation so we'll be deviating from the spec here. We'll be
 // continuing with hardened derivation.
 // We call it the "hardened chain" level and not the "change" level because
@@ -31,8 +31,8 @@ func BIP44Account(account uint32) uint32 {
 // Spacemesh isn't a UTXO-based system, so there's no concept of "change".
 // We're keeping the name "chain" because it's a more general term that can be
 // used to describe a sequence of addresses that are related to each other even
-// after the keyPair level.
-// (m/44'/540'/keyPair'/chain')
+// after the account level.
+// (m/44'/540'/account'/chain')
 func BIP44HardenedChain(chain uint32) uint32 {
 	return BIP32HardenedKeyStart | chain
 }
@@ -40,7 +40,7 @@ func BIP44HardenedChain(chain uint32) uint32 {
 // After the Hardened Chain level comes the address indices, as of now, we don't
 // support un-hardened derivation so we'll continue our deviation from the spec
 // here. All addresses will be hardened.
-// (m/44'/540'/keyPair'/chain'/address_index')
+// (m/44'/540'/account'/chain'/address_index')
 func BIP44HardenedAccountIndex(hai uint32) uint32 {
 	return BIP32HardenedKeyStart | hai
 }
@@ -55,7 +55,7 @@ func IsPathCompletelyHardened(path HDPath) bool {
 }
 
 // HDPathToString converts a BIP44 HD path to a string of the form
-// "m/44'/540'/keyPair'/chain'/address_index'"
+// "m/44'/540'/account'/chain'/address_index'"
 func HDPathToString(path HDPath) string {
 	s := "m"
 	for _, p := range path {
@@ -75,7 +75,7 @@ func parseUint(s string) uint {
 }
 
 // StringToHDPath converts a BIP44 HD path string of the form
-// (m/44'/540'/keyPair'/chain'/address_index') to its uint32 slice representation
+// (m/44'/540'/account'/chain'/address_index') to its uint32 slice representation
 func StringToHDPath(s string) (HDPath, error) {
 	// regex of the form m/44'/540'/account'/chain'/address_index'
 	rWholePath := regexp.MustCompile(`^m(\/\d+'?)+$`)
