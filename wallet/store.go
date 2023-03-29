@@ -1,15 +1,17 @@
 package wallet
 
 import (
+	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha512"
+	"encoding/hex"
 	"encoding/json"
-	"github.com/spacemeshos/smcli/common"
+	"log"
 	"os"
 
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/spf13/cobra"
 	"github.com/xdg-go/pbkdf2"
 )
@@ -19,15 +21,14 @@ const EncKeyLen = 32
 // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
 const Pbkdf2Iterations = 210000
 const Pbkdf2Dklen = 256
-
-//const Pdkdf2SaltBytesLen = 16
+const Pbkdf2SaltBytesLen = 16
 
 var Pbkdf2HashFunc = sha512.New
 
 type WalletKeyOpt func(*WalletKey)
 type WalletKey struct {
-	key []byte
-	//salt []byte
+	key  []byte
+	salt []byte
 }
 
 func NewKey(opts ...WalletKeyOpt) WalletKey {
@@ -42,11 +43,34 @@ func NewKey(opts ...WalletKeyOpt) WalletKey {
 	return *w
 }
 
-func WithPbkdf2Password(password string) WalletKeyOpt {
+func WithRandomSalt() WalletKeyOpt {
 	return func(k *WalletKey) {
+		if k.salt != nil {
+			log.Fatalf("Can only set salt once.")
+		}
+		k.salt = make([]byte, Pbkdf2SaltBytesLen)
+		_, err := rand.Read(k.salt)
+		cobra.CheckErr(err)
+	}
+}
+
+func WithSalt(salt [Pbkdf2SaltBytesLen]byte) WalletKeyOpt {
+	return func(k *WalletKey) {
+		if k.salt != nil {
+			log.Fatalf("Can only set salt once.")
+		}
+		k.salt = salt[:]
+	}
+}
+
+func WithPbkdf2Password(password []byte) WalletKeyOpt {
+	return func(k *WalletKey) {
+		if k.key != nil {
+			log.Fatalf("Can only generate key once.")
+		}
 		k.key = pbkdf2.Key(
-			[]byte(password),
-			[]byte(common.DefaultEncryptionSalt),
+			password,
+			k.salt,
 			Pbkdf2Iterations,
 			EncKeyLen,
 			Pbkdf2HashFunc,
@@ -94,14 +118,23 @@ func (k WalletKey) Open(file *os.File) (w *Wallet, err error) {
 		return nil, err
 	}
 
-	// make sure the salt matches
-	//salt := ew.Meta.Meta.Salt
-	//if salt != k.salt {
-	//	return nil, fmt.Errorf("wallet file salt mismatch")
-	//}
+	// make sure the salt matches (if set)
+	salt, err := hex.DecodeString(ew.Secrets.KDFParams.Salt)
+	if err != nil {
+		return nil, err
+	}
+	if len(k.salt) > 0 && !bytes.Equal(salt, k.salt) {
+		log.Printf("wallet key nonce does not match wallet file nonce")
+	}
 
-	nonce := base58.Decode(ew.Secrets.CipherParams.IV)
-	encWallet := base58.Decode(ew.Secrets.CipherText)
+	nonce, err := hex.DecodeString(ew.Secrets.CipherParams.IV)
+	if err != nil {
+		return nil, err
+	}
+	encWallet, err := hex.DecodeString(ew.Secrets.CipherText)
+	if err != nil {
+		return nil, err
+	}
 
 	// TODO: before decrypting, check that other meta params match
 	plaintext, err := k.decrypt(encWallet, nonce)
@@ -131,12 +164,11 @@ func (k WalletKey) Export(file *os.File, w *Wallet) error {
 		Meta: w.Meta,
 		Secrets: walletSecretsEncrypted{
 			Cipher:     "AES-GCM",
-			CipherText: base58.Encode(ciphertext),
+			CipherText: hex.EncodeToString(ciphertext),
 			CipherParams: struct {
 				IV string `json:"iv"`
-				// use hex encoding? base64?
 			}{
-				IV: base58.Encode(nonce),
+				IV: hex.EncodeToString(nonce),
 			},
 			KDF: "PBKDF2",
 			KDFParams: struct {
@@ -147,7 +179,7 @@ func (k WalletKey) Export(file *os.File, w *Wallet) error {
 			}{
 				DKLen:      Pbkdf2Dklen,
 				Hash:       "SHA-256",
-				Salt:       w.Meta.Meta.Salt,
+				Salt:       hex.EncodeToString(k.salt),
 				Iterations: Pbkdf2Iterations,
 			},
 		},

@@ -43,7 +43,7 @@ to quickly create a Cobra application.`,
 		fmt.Print("Enter a secure password (optional but strongly recommended): ")
 		password, err := password.Read(os.Stdin)
 		cobra.CheckErr(err)
-		wk := wallet.NewKey(wallet.WithPbkdf2Password(password))
+		wk := wallet.NewKey(wallet.WithRandomSalt(), wallet.WithPbkdf2Password([]byte(password)))
 		err = os.MkdirAll(common.DotDirectory(), 0700)
 		cobra.CheckErr(err)
 
