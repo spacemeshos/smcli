@@ -194,12 +194,8 @@ github.com/shirou/gopsutil v3.21.11+incompatible h1:+1+c1VGhc88SSonWP6foOcLhvnKl
 github.com/shirou/gopsutil v3.21.11+incompatible/go.mod h1:5b4v6he4MtMOwMlS0TUMTu2PcXUg8+E1lC7eC3UO/RA=
 github.com/spacemeshos/api/release/go v1.4.1-0.20220808081923-57864fb8ea2e h1:52WP6W7E5JkOF2B78J0sdmN+iORp+UZUOH6mWO34ToY=
 github.com/spacemeshos/api/release/go v1.4.1-0.20220808081923-57864fb8ea2e/go.mod h1:kNY4cuAimIxpUbMLPZSgU8jl7Zbv5ohQrLn87ybl0QI=
-github.com/spacemeshos/ed25519 v0.0.0-20200604074309-d72da3b5f487 h1:2WH45FeS7+jruksH6TPjv9dqDFJ0h2dmTaWx9qhn8F8=
-github.com/spacemeshos/ed25519 v0.0.0-20200604074309-d72da3b5f487/go.mod h1:lyZLUyZXvd7gp6KHwGS5ZgtS2ZvV++lBjdE4MLqmLnU=
 github.com/spacemeshos/ed25519-recovery v0.1.0 h1:ITp0ANR5MiJda51G5R0dV1K0oVcZYuMF1dVxgCP0pAk=
 github.com/spacemeshos/ed25519-recovery v0.1.0/go.mod h1:3U2H/u9WginYc6AmIoVWPR0A085I+w1RNnr3rWMCgCQ=
-github.com/spacemeshos/go-ledger-sdk v0.0.0-20230318071426-2ac4cc3e5089 h1:jL/sweYk0HcSkCfjxbbaM/f35+DDI2249djZSAMcG0w=
-github.com/spacemeshos/go-ledger-sdk v0.0.0-20230318071426-2ac4cc3e5089/go.mod h1:3zvo5w1SqWobNd2WxfZ0F1BwQQm6YRDMCnIJWpgx9Fk=
 github.com/spf13/afero v1.9.5 h1:stMpOSZFs//0Lv29HduCmli3GUfpFoF3Y1Q/aXj/wVM=
 github.com/spf13/afero v1.9.5/go.mod h1:UBogFpq8E9Hx+xc5CNTTEpTnuHVmXDwZcZcE1eb/UhQ=
 github.com/spf13/cast v1.5.0 h1:rj3WzYc11XZaIZMPKmwP96zkFEnnAmV8s6XbB2aY32w=

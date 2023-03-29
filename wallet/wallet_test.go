@@ -96,10 +96,6 @@ func TestComputeKeyPairFailsForUnhardenedPathSegment(t *testing.T) {
 	assert.Error(t, err)
 }
 
-//func TestListHardwareWallets(t *testing.T) {
-//
-//}
-
 func benchmarkComputeKeyPair(n int, b *testing.B) {
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
