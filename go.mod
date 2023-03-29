@@ -6,13 +6,15 @@ require (
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/dustin/go-humanize v1.0.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
-	github.com/spacemeshos/ed25519 v0.1.0
+	github.com/spacemeshos/ed25519-recovery v0.1.0
+	github.com/spacemeshos/go-ledger-sdk v0.0.0-20230318071426-2ac4cc3e5089
 	github.com/stretchr/testify v1.8.2
 	google.golang.org/grpc v1.54.0
 )
 
+require github.com/spacemeshos/ed25519 v0.0.0-20200604074309-d72da3b5f487 // indirect
+
 require (
-	github.com/alexedwards/argon2id v0.0.0-20211130144151-3585854a6387
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect

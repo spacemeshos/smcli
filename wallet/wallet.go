@@ -5,7 +5,7 @@ import (
 	"github.com/spacemeshos/smcli/common"
 	"github.com/tyler-smith/go-bip39"
 
-	"github.com/spacemeshos/ed25519"
+	ed25519sm "github.com/spacemeshos/ed25519-recovery"
 	"github.com/spf13/cobra"
 )
 
@@ -94,7 +94,7 @@ func NewWalletFromMnemonic(mnemonic string) *Wallet {
 	// Arbitrarily taking the first 32 bytes as the seed for the private key
 	// because spacemeshos/ed25519 gets angry if it gets all 64 bytes.
 	// Not sure if this is the correct approach.
-	masterKeyPair, err := NewMasterBIP32EDKeyPair(seed[ed25519.SeedSize:])
+	masterKeyPair, err := NewMasterBIP32EDKeyPair(seed[ed25519sm.SeedSize:])
 	cobra.CheckErr(err)
 
 	// We only use the master key pair as a seed to generate child addresses.

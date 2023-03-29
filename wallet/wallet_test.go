@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	ed25519sm "github.com/spacemeshos/ed25519"
+	ed25519sm "github.com/spacemeshos/ed25519-recovery"
 	"github.com/spacemeshos/smcli/wallet"
 	"github.com/stretchr/testify/assert"
 	"github.com/tyler-smith/go-bip39"
@@ -50,8 +50,8 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 
 	// Sanity check that the keypair works with the extended spacemesh ed25519 impl
 	// TODO: drop this?
-	sig = ed25519sm.Sign2(keyPair.Private, msg)
-	assert.True(t, ed25519sm.Verify2(keyPair.Public, msg, sig))
+	sig = ed25519sm.Sign(keyPair.Private, msg)
+	assert.True(t, ed25519sm.Verify(keyPair.Public, msg, sig))
 	extractedPubKey, err := ed25519sm.ExtractPublicKey(msg, sig)
 	assert.NoError(t, err)
 	assert.Equal(t, keyPair.Public, extractedPubKey)

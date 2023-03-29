@@ -4,7 +4,7 @@ import (
 	"crypto/sha512"
 	"testing"
 
-	"github.com/spacemeshos/ed25519"
+	"github.com/spacemeshos/ed25519-recovery"
 	"github.com/spacemeshos/smcli/wallet"
 	"github.com/stretchr/testify/assert"
 	"github.com/xdg-go/pbkdf2"
@@ -23,12 +23,12 @@ func TestNewMasterBIP32EDKeyPair(t *testing.T) {
 	assert.NotEmpty(t, masterKeyPair)
 
 	msg := []byte("master test")
-	sig := ed25519.Sign2(masterKeyPair.Private, msg)
-	valid := ed25519.Verify2(masterKeyPair.Public, msg, sig)
+	sig := ed25519.Sign(masterKeyPair.Private, msg)
+	valid := ed25519.Verify(masterKeyPair.Public, msg, sig)
 	assert.True(t, valid)
 
-	extracted_pub, err := ed25519.ExtractPublicKey(msg, sig)
-	assert.Equal(t, masterKeyPair.Public, extracted_pub)
+	extractedPub, err := ed25519.ExtractPublicKey(msg, sig)
+	assert.Equal(t, masterKeyPair.Public, extractedPub)
 }
 
 func TestNewChildKeyPair(t *testing.T) {
@@ -40,10 +40,10 @@ func TestNewChildKeyPair(t *testing.T) {
 	assert.NotEmpty(t, childKeyPair)
 
 	msg := []byte("child test")
-	sig := ed25519.Sign2(childKeyPair.Private, msg)
-	valid := ed25519.Verify2(childKeyPair.Public, msg, sig)
+	sig := ed25519.Sign(childKeyPair.Private, msg)
+	valid := ed25519.Verify(childKeyPair.Public, msg, sig)
 	assert.True(t, valid)
 
-	extracted_pub, err := ed25519.ExtractPublicKey(msg, sig)
-	assert.Equal(t, childKeyPair.Public, extracted_pub)
+	extractedPub, err := ed25519.ExtractPublicKey(msg, sig)
+	assert.Equal(t, childKeyPair.Public, extractedPub)
 }

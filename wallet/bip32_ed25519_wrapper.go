@@ -3,7 +3,7 @@ package wallet
 import (
 	"crypto/ed25519"
 	"errors"
-	ed25519sm "github.com/spacemeshos/ed25519"
+	ed25519sm "github.com/spacemeshos/ed25519-recovery"
 	"github.com/spacemeshos/smcli/common"
 )
 
