@@ -66,7 +66,7 @@ func TestKeysInWalletMaintainExpectedPath(t *testing.T) {
 		path, _ := wallet.StringToHDPath(fmt.Sprintf("m/44'/540'/%d'/%d'/%d'", i, i, i))
 		keyPair, err := w.ComputeKeyPair(path)
 		assert.NoError(t, err)
-		assert.Equal(t, keyPair.Path, path)
+		assert.Equal(t, path, keyPair.Path)
 	}
 }
 

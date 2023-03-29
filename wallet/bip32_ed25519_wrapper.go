@@ -106,7 +106,7 @@ func NewMasterBIP32EDKeyPair(seed []byte) (*BIP32EDKeyPair, error) {
 	return &BIP32EDKeyPair{
 		Private: privKey,
 		Public:  privKey.Public().(ed25519.PublicKey),
-		Path:    NewPath(),
+		Path:    HDPath{},
 		Salt:    salt,
 	}, nil
 }

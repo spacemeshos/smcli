@@ -97,12 +97,6 @@ func NewWalletFromMnemonic(mnemonic string) *Wallet {
 	masterKeyPair, err := NewMasterBIP32EDKeyPair(seed[ed25519sm.SeedSize:])
 	cobra.CheckErr(err)
 
-	// We only use the master key pair as a seed to generate child addresses.
-	// We don't store the master key pair as an address.
-	// Go ahead and derive the first child address.
-	keyPair, err := masterKeyPair.NewChildKeyPair(BIP44Account(0))
-	cobra.CheckErr(err)
-
 	displayName := "Main Wallet"
 	createTime := common.NowTimeString()
 
@@ -118,12 +112,22 @@ func NewWalletFromMnemonic(mnemonic string) *Wallet {
 		},
 		Secrets: walletSecrets{
 			Mnemonic: mnemonic,
-			Accounts: []*BIP32EDKeyPair{
-				keyPair,
-			},
+			//Accounts: []*BIP32EDKeyPair{
+			//	keyPair,
+			//},
 		},
 		masterKeypair: masterKeyPair,
 	}
+
+	// Add the first key pair.
+	// We only use the master key pair as a seed to generate child addresses.
+	// We don't store the master key pair as an address.
+	// Go ahead and derive the first child address.
+	// To do this, we need to construct the appropriate path first.
+	path := append(NewPath(), BIP44Account(0))
+	keyPair, err := w.ComputeKeyPair(path)
+	cobra.CheckErr(err)
+	w.Secrets.Accounts = []*BIP32EDKeyPair{keyPair}
 
 	return w
 }
