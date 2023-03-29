@@ -130,6 +130,7 @@ func NewWalletFromMnemonic(mnemonic string) *Wallet {
 func (w *Wallet) Salt() []byte {
 	return []byte(w.Meta.Meta.Salt)
 }
+
 func (w *Wallet) Mnemonic() string {
 	return w.Secrets.Mnemonic
 }

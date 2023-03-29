@@ -28,6 +28,7 @@ var Pbkdf2HashFunc = sha512.New
 type WalletKeyOpt func(*WalletKey)
 type WalletKey struct {
 	key  []byte
+	pw   []byte
 	salt []byte
 }
 
@@ -36,8 +37,8 @@ func NewKey(opts ...WalletKeyOpt) WalletKey {
 	for _, opt := range opts {
 		opt(w)
 	}
-	if w.key == nil {
-		panic("Some form of key generation method must be provided. Try WithXXXPassword.")
+	if w.key == nil && w.pw == nil {
+		log.Fatalf("Some form of key generation method must be provided. Try WithXXXPassword.")
 	}
 
 	return *w
@@ -60,11 +61,36 @@ func WithSalt(salt [Pbkdf2SaltBytesLen]byte) WalletKeyOpt {
 			log.Fatalf("Can only set salt once.")
 		}
 		k.salt = salt[:]
+
+		// if password is set, set the key as well
+		if k.pw != nil {
+			WithPbkdf2Password(k.pw)(k)
+		}
+	}
+}
+
+// WithPasswordOnly is used for reading a stored file. The stored wallet file contains
+// a salt, so it does not need to be set before reading the file.
+func WithPasswordOnly(password []byte) WalletKeyOpt {
+	return func(k *WalletKey) {
+		if k.salt != nil {
+			log.Fatalf("Salt must not be set.")
+		}
+		if k.key != nil {
+			log.Fatalf("Can only generate key once.")
+		}
+		if k.pw != nil {
+			log.Fatalf("Password can only be set once.")
+		}
+		k.pw = password
 	}
 }
 
 func WithPbkdf2Password(password []byte) WalletKeyOpt {
 	return func(k *WalletKey) {
+		if k.salt == nil {
+			log.Fatalf("Salt must be set.")
+		}
 		if k.key != nil {
 			log.Fatalf("Can only generate key once.")
 		}
@@ -79,7 +105,7 @@ func WithPbkdf2Password(password []byte) WalletKeyOpt {
 }
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html#71-encryption-types-to-use
-func (k WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte) {
+func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte) {
 	block, err := aes.NewCipher(k.key)
 	cobra.CheckErr(err)
 
@@ -96,7 +122,8 @@ func (k WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte) {
 	ciphertext = aesgcm.Seal(nil, nonce, plaintext, nil)
 	return ciphertext, nonce
 }
-func (k WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, err error) {
+
+func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, err error) {
 	block, err := aes.NewCipher(k.key)
 	cobra.CheckErr(err)
 	aesgcm, err := cipher.NewGCM(block)
@@ -108,7 +135,7 @@ func (k WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, e
 	return plaintext, nil
 }
 
-func (k WalletKey) Open(file *os.File) (w *Wallet, err error) {
+func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
 	jsonWallet, err := os.ReadFile(file.Name())
 	if err != nil {
 		return nil, err
@@ -118,13 +145,17 @@ func (k WalletKey) Open(file *os.File) (w *Wallet, err error) {
 		return nil, err
 	}
 
-	// make sure the salt matches (if set)
-	salt, err := hex.DecodeString(ew.Secrets.KDFParams.Salt)
+	// set the salt, and warn if it's different
+	var salt [Pbkdf2SaltBytesLen]byte
+	saltTmp, err := hex.DecodeString(ew.Secrets.KDFParams.Salt)
+	copy(salt[:], saltTmp)
 	if err != nil {
 		return nil, err
 	}
-	if len(k.salt) > 0 && !bytes.Equal(salt, k.salt) {
-		log.Printf("wallet key nonce does not match wallet file nonce")
+	if k.salt == nil {
+		WithSalt(salt)(k)
+	} else if !bytes.Equal(saltTmp, k.salt) {
+		log.Printf("wallet key salt does not match wallet file salt")
 	}
 
 	nonce, err := hex.DecodeString(ew.Secrets.CipherParams.IV)
@@ -153,7 +184,7 @@ func (k WalletKey) Open(file *os.File) (w *Wallet, err error) {
 	return
 }
 
-func (k WalletKey) Export(file *os.File, w *Wallet) error {
+func (k *WalletKey) Export(file *os.File, w *Wallet) error {
 	// encrypt the secrets
 	plaintext, err := json.Marshal(w.Secrets)
 	if err != nil {
