@@ -3,38 +3,30 @@ module github.com/spacemeshos/smcli
 go 1.18
 
 require (
-	github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d
-	github.com/dustin/go-humanize v1.0.0
+	github.com/btcsuite/btcutil v1.0.2
+	github.com/dustin/go-humanize v1.0.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
-	github.com/spacemeshos/ed25519 v0.1.1
-	github.com/spacemeshos/go-ledger-sdk v0.0.0-20230318035731-ee5b4a7c6c47
+	github.com/spacemeshos/ed25519 v0.1.0
 	github.com/stretchr/testify v1.8.2
 	google.golang.org/grpc v1.54.0
 )
 
 require (
+	github.com/alexedwards/argon2id v0.0.0-20211130144151-3585854a6387
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rogpeppe/go-internal v1.9.0 // indirect
-	golang.org/x/crypto v0.4.0 // indirect
-	golang.org/x/net v0.8.0 // indirect
-	golang.org/x/term v0.6.0 // indirect
-	google.golang.org/genproto v0.0.0-20230223222841-637eb2293923 // indirect
-	google.golang.org/protobuf v1.30.0 // indirect
-)
-
-require (
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.15.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
-	github.com/spacemeshos/api/release/go v1.5.6
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/spacemeshos/api/release/go v1.4.1-0.20220808081923-57864fb8ea2e
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/cobra v1.6.1
@@ -47,8 +39,13 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/xdg-go/pbkdf2 v1.0.0
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
+	golang.org/x/crypto v0.4.0 // indirect
+	golang.org/x/net v0.8.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/term v0.6.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
+	google.golang.org/genproto v0.0.0-20230223222841-637eb2293923 // indirect
+	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
