@@ -134,10 +134,6 @@ func (w *Wallet) Mnemonic() string {
 	return w.Secrets.Mnemonic
 }
 
-//func (w *Wallet) ToBytes() []byte {
-//	return []byte(w.Mnemonic())
-//}
-
 // ComputeKeyPair returns the key pair for the given HDPath.
 // It will compute it every time from the master key.
 // If the path is empty, it will return the master key pair.

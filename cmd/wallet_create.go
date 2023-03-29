@@ -44,7 +44,6 @@ to quickly create a Cobra application.`,
 		password, err := password.Read(os.Stdin)
 		cobra.CheckErr(err)
 		wk := wallet.NewKey(wallet.WithPbkdf2Password(password))
-		ws := wallet.NewStore(wk)
 		err = os.MkdirAll(common.DotDirectory(), 0700)
 		cobra.CheckErr(err)
 
@@ -58,7 +57,7 @@ to quickly create a Cobra application.`,
 		// Now open for writing
 		f, err = os.OpenFile(walletFn, os.O_WRONLY|os.O_CREATE, 0600)
 		cobra.CheckErr(err)
-		cobra.CheckErr(ws.Export(f, w))
+		cobra.CheckErr(wk.Export(f, w))
 
 		fmt.Printf("Wallet saved to %s. BACK UP THIS FILE NOW!\n", walletFn)
 	},

@@ -4,9 +4,9 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha512"
 	"encoding/json"
+	"github.com/spacemeshos/smcli/common"
 	"os"
 
 	"github.com/btcsuite/btcutil/base58"
@@ -17,20 +17,20 @@ import (
 const EncKeyLen = 32
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
-// TODO: should this be increased to 210,000 per the above link?
-const Pbkdf2Iterations = 120000
+const Pbkdf2Iterations = 210000
 const Pbkdf2Dklen = 256
-const Pdkdf2SaltBytesLen = 16
+
+//const Pdkdf2SaltBytesLen = 16
 
 var Pbkdf2HashFunc = sha512.New
 
 type WalletKeyOpt func(*WalletKey)
 type WalletKey struct {
-	key  []byte
-	salt []byte
+	key []byte
+	//salt []byte
 }
 
-func NewKey(opts ...WalletKeyOpt) *WalletKey {
+func NewKey(opts ...WalletKeyOpt) WalletKey {
 	w := &WalletKey{}
 	for _, opt := range opts {
 		opt(w)
@@ -39,16 +39,14 @@ func NewKey(opts ...WalletKeyOpt) *WalletKey {
 		panic("Some form of key generation method must be provided. Try WithXXXPassword.")
 	}
 
-	return w
+	return *w
 }
 
-// Complies with FIPS-140
 func WithPbkdf2Password(password string) WalletKeyOpt {
 	return func(k *WalletKey) {
-		k.salt = make([]byte, Pdkdf2SaltBytesLen)
-		_, err := rand.Read(k.salt)
-		cobra.CheckErr(err)
-		k.key = pbkdf2.Key([]byte(password), k.salt,
+		k.key = pbkdf2.Key(
+			[]byte(password),
+			[]byte(common.DefaultEncryptionSalt),
 			Pbkdf2Iterations,
 			EncKeyLen,
 			Pbkdf2HashFunc,
@@ -57,7 +55,7 @@ func WithPbkdf2Password(password string) WalletKeyOpt {
 }
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html#71-encryption-types-to-use
-func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte) {
+func (k WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte) {
 	block, err := aes.NewCipher(k.key)
 	cobra.CheckErr(err)
 
@@ -74,7 +72,7 @@ func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte) 
 	ciphertext = aesgcm.Seal(nil, nonce, plaintext, nil)
 	return ciphertext, nonce
 }
-func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, err error) {
+func (k WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, err error) {
 	block, err := aes.NewCipher(k.key)
 	cobra.CheckErr(err)
 	aesgcm, err := cipher.NewGCM(block)
@@ -86,58 +84,49 @@ func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, 
 	return plaintext, nil
 }
 
-//	type WalletOpener interface {
-//		Open(path string) (*Wallet, error)
-//	}
-//
-//	type WalletExporter interface {
-//		Export(path string) error
-//	}
-//
-//	type ExportableWallet struct {
-//		// EncryptedWallet is the encrypted wallet data in base58 encoding.
-//		EncryptedWallet string `json:"encrypted_wallet"`
-//		// Salt is the salt used to derived the wallet's encryption key in base58 encoding.
-//		Salt string `json:"salt"`
-//		// Nonce is the nonce used to encrypt the wallet in base58 encoding.
-//		Nonce []byte `json:"nonce"`
-//	}
-//
-//	type WalletStore struct {
-//		wk WalletKey
-//	}
-//
-//	func NewStore(wk *WalletKey) *WalletStore {
-//		return &WalletStore{
-//			wk: *wk,
-//		}
-//	}
-func Open(file *os.File) (w *Wallet, err error) {
+func (k WalletKey) Open(file *os.File) (w *Wallet, err error) {
 	jsonWallet, err := os.ReadFile(file.Name())
 	if err != nil {
 		return nil, err
 	}
-	ew := &ExportableWallet{}
+	ew := &EncryptedWalletFile{}
 	if err = json.Unmarshal(jsonWallet, ew); err != nil {
 		return nil, err
 	}
-	s.wk.salt = base58.Decode(ew.Salt) // Replace auto-generated salt with the one from the wallet file.
-	encWallet := base58.Decode(ew.EncryptedWallet)
-	decMnemonic, err := s.wk.decrypt(encWallet, ew.Nonce)
+
+	// make sure the salt matches
+	//salt := ew.Meta.Meta.Salt
+	//if salt != k.salt {
+	//	return nil, fmt.Errorf("wallet file salt mismatch")
+	//}
+
+	nonce := base58.Decode(ew.Secrets.CipherParams.IV)
+	encWallet := base58.Decode(ew.Secrets.CipherText)
+
+	// TODO: before decrypting, check that other meta params match
+	plaintext, err := k.decrypt(encWallet, nonce)
 	if err != nil {
 		return nil, err
 	}
-	w = NewWalletFromMnemonic(string(decMnemonic))
-	return w, nil
+	secrets := &walletSecrets{}
+	if err = json.Unmarshal(plaintext, secrets); err != nil {
+		return nil, err
+	}
+
+	// we have everything we need, construct and return the wallet. first, we construct
+	// a new wallet from the mnemonic. then we restore the metadata.
+	w = NewWalletFromMnemonic(secrets.Mnemonic)
+	w.Meta = ew.Meta
+	return
 }
 
-func (w *Wallet) Export(ws WalletKey, file *os.File) error {
+func (k WalletKey) Export(file *os.File, w *Wallet) error {
 	// encrypt the secrets
 	plaintext, err := json.Marshal(w.Secrets)
 	if err != nil {
 		return err
 	}
-	ciphertext, nonce := ws.encrypt(plaintext)
+	ciphertext, nonce := k.encrypt(plaintext)
 	ew := &EncryptedWalletFile{
 		Meta: w.Meta,
 		Secrets: walletSecretsEncrypted{
@@ -146,7 +135,9 @@ func (w *Wallet) Export(ws WalletKey, file *os.File) error {
 			CipherParams: struct {
 				IV string `json:"iv"`
 				// use hex encoding? base64?
-			}{IV: string(nonce)},
+			}{
+				IV: base58.Encode(nonce),
+			},
 			KDF: "PBKDF2",
 			KDFParams: struct {
 				DKLen      int    `json:"dklen"`

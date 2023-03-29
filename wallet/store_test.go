@@ -15,7 +15,6 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 	wKey := wallet.NewKey(
 		wallet.WithPbkdf2Password("password"),
 	)
-	wStore := wallet.NewStore(wKey)
 
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
@@ -28,11 +27,10 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 	defer os.Remove(file.Name())
 
 	fmt.Println(file.Name())
-	err = wStore.Export(file, w)
+	err = wKey.Export(file, w)
 	assert.NoError(t, err)
 
-	wStore2 := wallet.NewStore(wKey)
-	w2, err := wStore2.Open(file)
+	w2, err := wKey.Open(file)
 	assert.NoError(t, err)
 	assert.Equal(t, w.Mnemonic(), w2.Mnemonic())
 }
