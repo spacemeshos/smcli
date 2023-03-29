@@ -73,6 +73,11 @@ func WithSalt(salt [Pbkdf2SaltBytesLen]byte) WalletKeyOpt {
 func WithIterations(iterations int) WalletKeyOpt {
 	return func(k *WalletKey) {
 		k.iterations = iterations
+		if k.key != nil {
+			// regenerate
+			k.key = nil
+			WithPbkdf2Password(k.pw)(k)
+		}
 	}
 }
 
@@ -112,6 +117,7 @@ func WithPbkdf2Password(password []byte) WalletKeyOpt {
 			EncKeyLen,
 			Pbkdf2HashFunc,
 		)
+		k.pw = password
 	}
 }
 
