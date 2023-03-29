@@ -4,7 +4,6 @@ import (
 	"crypto/ed25519"
 	"encoding/json"
 	"errors"
-	"fmt"
 	ed25519sm "github.com/spacemeshos/ed25519-recovery"
 	"github.com/spacemeshos/smcli/common"
 	"log"
@@ -48,9 +47,23 @@ func NewPath() HDPath {
 }
 
 func (p HDPath) MarshalJSON() ([]byte, error) {
-	s := p.String()
-	fmt.Println("Marshaled:", s)
 	return json.Marshal(p.String())
+}
+
+func (p HDPath) UnmarshalJSON(data []byte) error {
+	var aux string
+	err := json.Unmarshal(data, &aux)
+	if err != nil {
+		return err
+	}
+	hdp, err := StringToHDPath(aux)
+	if err != nil {
+		return err
+	}
+	for i := range p {
+		p[i] = hdp[i]
+	}
+	return nil
 }
 
 func (p HDPath) String() string {
