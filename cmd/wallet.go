@@ -53,6 +53,7 @@ generate a new, random mnemonic, or use an existing mnemonic.`,
 
 		fmt.Print("Enter a secure password (optional but strongly recommended): ")
 		password, err := password.Read(os.Stdin)
+		fmt.Println()
 		cobra.CheckErr(err)
 		wk := wallet.NewKey(wallet.WithRandomSalt(), wallet.WithPbkdf2Password([]byte(password)))
 		err = os.MkdirAll(common.DotDirectory(), 0700)
@@ -92,6 +93,7 @@ It prints the mnemonic and accounts from the wallet file.`,
 		// get the password
 		fmt.Print("Enter wallet password: ")
 		password, err := password.Read(os.Stdin)
+		fmt.Println()
 		cobra.CheckErr(err)
 
 		// attempt to read it

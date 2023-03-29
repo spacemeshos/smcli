@@ -59,7 +59,7 @@ func IsPathCompletelyHardened(path HDPath) bool {
 func HDPathToString(path HDPath) string {
 	s := "m"
 	for _, p := range path {
-		if p > BIP32HardenedKeyStart {
+		if p >= BIP32HardenedKeyStart {
 			s += "/" + fmt.Sprint(p-BIP32HardenedKeyStart) + "'"
 		} else {
 			s += "/" + fmt.Sprint(p)

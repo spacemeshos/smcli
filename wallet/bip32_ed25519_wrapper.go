@@ -2,9 +2,12 @@ package wallet
 
 import (
 	"crypto/ed25519"
+	"encoding/json"
 	"errors"
+	"fmt"
 	ed25519sm "github.com/spacemeshos/ed25519-recovery"
 	"github.com/spacemeshos/smcli/common"
+	"log"
 )
 
 // BIP32HardenedKeyStart: keys with index >= this must be hardened as per BIP32.
@@ -32,6 +35,23 @@ const (
 )
 
 type HDPath []uint32
+
+// NewPath constructs and returns a new, default "empty" path, ready to add
+// new accounts to
+// TODO: support multiple chain IDs
+func NewPath() HDPath {
+	hdp, err := StringToHDPath("m/44'/540'/0'/0'")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return hdp
+}
+
+func (p HDPath) MarshalJSON() ([]byte, error) {
+	s := p.String()
+	fmt.Println("Marshaled:", s)
+	return json.Marshal(p.String())
+}
 
 func (p HDPath) String() string {
 	return HDPathToString(p)
@@ -73,9 +93,8 @@ func NewMasterBIP32EDKeyPair(seed []byte) (*BIP32EDKeyPair, error) {
 	return &BIP32EDKeyPair{
 		Private: privKey,
 		Public:  privKey.Public().(ed25519.PublicKey),
-		// master key has no path
-		Path: HDPath{},
-		Salt: salt,
+		Path:    NewPath(),
+		Salt:    salt,
 	}, nil
 }
 

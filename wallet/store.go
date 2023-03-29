@@ -19,7 +19,9 @@ import (
 const EncKeyLen = 32
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
-const Pbkdf2Iterations = 210000
+// TODO: increase to 210000 per OWASP recommendations (update smapp too)
+const Pbkdf2Iterations = 120000
+
 const Pbkdf2Dklen = 256
 const Pbkdf2SaltBytesLen = 16
 
@@ -172,6 +174,7 @@ func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
 	if err != nil {
 		return nil, err
 	}
+	log.Println("Decrypted JSON data:", string(plaintext))
 	secrets := &walletSecrets{}
 	if err = json.Unmarshal(plaintext, secrets); err != nil {
 		return nil, err
