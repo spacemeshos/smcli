@@ -19,9 +19,7 @@ import (
 const EncKeyLen = 32
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
-// TODO: increase to 210000 per OWASP recommendations (update smapp too)
-const Pbkdf2Iterations = 120000
-
+const Pbkdf2Iterations = 210000
 const Pbkdf2Dklen = 256
 const Pbkdf2SaltBytesLen = 16
 
@@ -29,9 +27,10 @@ var Pbkdf2HashFunc = sha512.New
 
 type WalletKeyOpt func(*WalletKey)
 type WalletKey struct {
-	key  []byte
-	pw   []byte
-	salt []byte
+	key        []byte
+	pw         []byte
+	salt       []byte
+	iterations int
 }
 
 func NewKey(opts ...WalletKeyOpt) WalletKey {
@@ -71,6 +70,12 @@ func WithSalt(salt [Pbkdf2SaltBytesLen]byte) WalletKeyOpt {
 	}
 }
 
+func WithIterations(iterations int) WalletKeyOpt {
+	return func(k *WalletKey) {
+		k.iterations = iterations
+	}
+}
+
 // WithPasswordOnly is used for reading a stored file. The stored wallet file contains
 // a salt, so it does not need to be set before reading the file.
 func WithPasswordOnly(password []byte) WalletKeyOpt {
@@ -96,10 +101,14 @@ func WithPbkdf2Password(password []byte) WalletKeyOpt {
 		if k.key != nil {
 			log.Fatalf("Can only generate key once.")
 		}
+		iterations := k.iterations
+		if iterations == 0 {
+			iterations = Pbkdf2Iterations
+		}
 		k.key = pbkdf2.Key(
 			password,
 			k.salt,
-			Pbkdf2Iterations,
+			iterations,
 			EncKeyLen,
 			Pbkdf2HashFunc,
 		)
@@ -158,6 +167,10 @@ func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
 		WithSalt(salt)(k)
 	} else if !bytes.Equal(saltTmp, k.salt) {
 		log.Printf("wallet key salt does not match wallet file salt")
+	}
+	WithIterations(ew.Secrets.KDFParams.Iterations)(k)
+	if ew.Secrets.KDFParams.Iterations < Pbkdf2Iterations {
+		log.Println("Warning: wallet file iterations count lower than recommended")
 	}
 
 	nonce, err := hex.DecodeString(ew.Secrets.CipherParams.IV)
