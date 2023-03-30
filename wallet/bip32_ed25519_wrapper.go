@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"crypto/ed25519"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"github.com/spacemeshos/smcli/common"
@@ -92,7 +93,48 @@ type EDKeyPair struct {
 	//Path    HDPath             `json:"path"`
 	Public  ed25519.PublicKey  `json:"publicKey"`
 	Private ed25519.PrivateKey `json:"secretKey"`
-	Salt    []byte
+	Salt    []byte             `json:"salt"`
+}
+
+func (k *EDKeyPair) MarshalJSON() ([]byte, error) {
+	type Alias EDKeyPair
+	return json.Marshal(&struct {
+		Public  string `json:"publicKey"`
+		Private string `json:"secretKey"`
+		Salt    string `json:"salt"`
+		*Alias
+	}{
+		Public:  hex.EncodeToString(k.Public),
+		Private: hex.EncodeToString(k.Private),
+		Salt:    hex.EncodeToString(k.Salt),
+		Alias:   (*Alias)(k),
+	})
+}
+
+func (k *EDKeyPair) UnmarshalJSON(data []byte) error {
+	type Alias EDKeyPair
+	aux := &struct {
+		Public  string `json:"publicKey"`
+		Private string `json:"secretKey"`
+		Salt    string `json:"salt"`
+		*Alias
+	}{
+		Alias: (*Alias)(k),
+	}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return err
+	}
+	var err error
+	if k.Public, err = hex.DecodeString(aux.Public); err != nil {
+		return err
+	}
+	if k.Private, err = hex.DecodeString(aux.Private); err != nil {
+		return err
+	}
+	if k.Salt, err = hex.DecodeString(aux.Salt); err != nil {
+		return err
+	}
+	return nil
 }
 
 func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
@@ -103,9 +145,11 @@ func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
 	privKey := ed25519.NewKeyFromSeed(seed)
 
 	return &EDKeyPair{
-		Private: privKey,
-		Public:  privKey.Public().(ed25519.PublicKey),
-		Salt:    salt,
+		DisplayName: "Main Wallet",
+		Created:     common.NowTimeString(),
+		Private:     privKey,
+		Public:      privKey.Public().(ed25519.PublicKey),
+		Salt:        salt,
 	}, nil
 }
 
