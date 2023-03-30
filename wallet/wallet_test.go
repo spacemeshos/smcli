@@ -16,7 +16,7 @@ import (
 func TestWalletFromNewMnemonic(t *testing.T) {
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
-	w := wallet.NewWalletFromMnemonic(mnemonic)
+	w := wallet.NewWalletFromSeed(mnemonic)
 
 	assert.NotNil(t, w)
 	assert.Equal(t, mnemonic, w.Mnemonic())
@@ -24,7 +24,7 @@ func TestWalletFromNewMnemonic(t *testing.T) {
 
 func TestWalletFromGivenMnemonic(t *testing.T) {
 	mnemonic := "film theme cheese broken kingdom destroy inch ready wear inspire shove pudding"
-	w := wallet.NewWalletFromMnemonic(mnemonic)
+	w := wallet.NewWalletFromSeed(mnemonic)
 	keyPath, err := wallet.StringToHDPath("m/44'/540'/0'/0'/0'")
 	assert.NoError(t, err)
 	keyPair, err := w.ComputeKeyPair(keyPath)
@@ -60,7 +60,7 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 func TestKeysInWalletMaintainExpectedPath(t *testing.T) {
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
-	w := wallet.NewWalletFromMnemonic(mnemonic)
+	w := wallet.NewWalletFromSeed(mnemonic)
 
 	for i := 0; i < 100; i++ {
 		path, _ := wallet.StringToHDPath(fmt.Sprintf("m/44'/540'/%d'/%d'/%d'", i, i, i))
@@ -73,7 +73,7 @@ func TestKeysInWalletMaintainExpectedPath(t *testing.T) {
 func TestKeysInWalletMaintainSalt(t *testing.T) {
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
-	w := wallet.NewWalletFromMnemonic(mnemonic)
+	w := wallet.NewWalletFromSeed(mnemonic)
 	fmt.Println(string(w.Salt()))
 
 	path, _ := wallet.StringToHDPath("m/44'/540'")
@@ -90,7 +90,7 @@ func TestKeysInWalletMaintainSalt(t *testing.T) {
 func TestComputeKeyPairFailsForUnhardenedPathSegment(t *testing.T) {
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
-	w := wallet.NewWalletFromMnemonic(mnemonic)
+	w := wallet.NewWalletFromSeed(mnemonic)
 	path, _ := wallet.StringToHDPath("m/44'/540'/0'/0'/0")
 	_, err := w.ComputeKeyPair(path)
 	assert.Error(t, err)
@@ -99,7 +99,7 @@ func TestComputeKeyPairFailsForUnhardenedPathSegment(t *testing.T) {
 func benchmarkComputeKeyPair(n int, b *testing.B) {
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
-	w := wallet.NewWalletFromMnemonic(mnemonic)
+	w := wallet.NewWalletFromSeed(mnemonic)
 	for i := 0; i < b.N; i++ { // benchmark-controlled loop
 		for j := 0; j < n; j++ { // specified number of iterations
 			path, _ := wallet.StringToHDPath(fmt.Sprintf("m/44'/540'/0'/0'/%d'", j))

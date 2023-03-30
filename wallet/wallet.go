@@ -1,12 +1,12 @@
 package wallet
 
 import (
+	"crypto/ed25519"
 	"fmt"
-	"github.com/spacemeshos/smcli/common"
-	"github.com/tyler-smith/go-bip39"
-
 	ed25519sm "github.com/spacemeshos/ed25519-recovery"
+	"github.com/spacemeshos/smcli/common"
 	"github.com/spf13/cobra"
+	"github.com/tyler-smith/go-bip39"
 )
 
 // Wallet is the basic data structure.
@@ -19,7 +19,7 @@ type Wallet struct {
 	//Encrypted walletSecretsEncrypted `json:"crypto"`
 
 	// this is not persisted
-	masterKeypair *BIP32EDKeyPair
+	masterKeypair *EDKeyPair
 }
 
 // EncryptedWalletFile is the encrypted representation of the wallet on the filesystem
@@ -60,8 +60,8 @@ type walletSecretsEncrypted struct {
 }
 
 type walletSecrets struct {
-	Mnemonic string            `json:"mnemonic"`
-	Accounts []*BIP32EDKeyPair `json:"accounts"`
+	//Mnemonic string       `json:"mnemonic"`
+	Accounts []*EDKeyPair `json:"accounts"`
 
 	//accountNumber int
 
@@ -74,27 +74,17 @@ type walletSecrets struct {
 //	Address  string `json:"address"`
 //}
 
-// NewWallet creates a brand new wallet with a random mnemonic.
+// NewWallet creates a brand new wallet with a random seed.
 func NewWallet() *Wallet {
-	e, _ := bip39.NewEntropy(256)
-	m, _ := bip39.NewMnemonic(e)
-	return NewWalletFromMnemonic(m)
+	e, _ := bip39.NewEntropy(ed25519sm.SeedSize * 8)
+	return NewWalletFromSeed(e)
 }
 
-// NewWalletFromMnemonic creates a new wallet from the given mnemonic.
-// The mnemonic must be a valid bip39 mnemonic.
-func NewWalletFromMnemonic(mnemonic string) *Wallet {
-	if !bip39.IsMnemonicValid(mnemonic) {
-		panic("invalid mnemonic")
-	}
-	// TODO: add option for user to provide passphrase
-	// https://github.com/spacemeshos/smcli/issues/18
-	seed := bip39.NewSeed(mnemonic, "")
-
-	// Arbitrarily taking the first 32 bytes as the seed for the private key
-	// because spacemeshos/ed25519 gets angry if it gets all 64 bytes.
+// NewWalletFromSeed creates a new wallet from the given seed.
+func NewWalletFromSeed(seed []byte) *Wallet {
+	// Arbitrarily taking the first 32 bytes as the seed for the private key.
 	// Not sure if this is the correct approach.
-	masterKeyPair, err := NewMasterBIP32EDKeyPair(seed[ed25519sm.SeedSize:])
+	masterKeyPair, err := NewMasterKeyPair(seed[ed25519.SeedSize:])
 	cobra.CheckErr(err)
 
 	displayName := "Main Wallet"
@@ -111,8 +101,8 @@ func NewWalletFromMnemonic(mnemonic string) *Wallet {
 			},
 		},
 		Secrets: walletSecrets{
-			Mnemonic: mnemonic,
-			//Accounts: []*BIP32EDKeyPair{
+			//Mnemonic: mnemonic,
+			//Accounts: []*EDKeyPair{
 			//	keyPair,
 			//},
 		},
@@ -127,7 +117,7 @@ func NewWalletFromMnemonic(mnemonic string) *Wallet {
 	path := append(NewPath(), BIP44Account(0))
 	keyPair, err := w.ComputeKeyPair(path)
 	cobra.CheckErr(err)
-	w.Secrets.Accounts = []*BIP32EDKeyPair{keyPair}
+	w.Secrets.Accounts = []*EDKeyPair{keyPair}
 
 	return w
 }
@@ -142,7 +132,7 @@ func (w *Wallet) Mnemonic() string {
 // ComputeKeyPair returns the key pair for the given HDPath.
 // It will compute it every time from the master key.
 // If the path is empty, it will return the master key pair.
-func (w *Wallet) ComputeKeyPair(path HDPath) (*BIP32EDKeyPair, error) {
+func (w *Wallet) ComputeKeyPair(path HDPath) (*EDKeyPair, error) {
 	if !IsPathCompletelyHardened(path) {
 		return nil, fmt.Errorf("unhardened keys aren't supported")
 	}

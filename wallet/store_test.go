@@ -25,7 +25,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 
 	entropy, _ := bip39.NewEntropy(256)
 	mnemonic, _ := bip39.NewMnemonic(entropy)
-	w := wallet.NewWalletFromMnemonic(mnemonic)
+	w := wallet.NewWalletFromSeed(mnemonic)
 
 	file, err := os.CreateTemp("./", "test_wallet.*.json")
 	if err != nil {

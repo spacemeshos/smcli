@@ -10,11 +10,11 @@ import (
 	"github.com/xdg-go/pbkdf2"
 )
 
-func generateTestMasterKeyPair() (*wallet.BIP32EDKeyPair, error) {
+func generateTestMasterKeyPair() (*wallet.EDKeyPair, error) {
 	mnemonic := "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 	password := "Winning together!"
 	seed := pbkdf2.Key([]byte(mnemonic), []byte("mnemonic"+password), 2048, 32, sha512.New)
-	return wallet.NewMasterBIP32EDKeyPair(seed)
+	return wallet.NewMasterKeyPair(seed)
 }
 
 func TestNewMasterBIP32EDKeyPair(t *testing.T) {

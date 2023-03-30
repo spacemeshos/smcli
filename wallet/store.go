@@ -201,7 +201,7 @@ func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
 
 	// we have everything we need, construct and return the wallet. first, we construct
 	// a new wallet from the mnemonic. then we restore the metadata.
-	w = NewWalletFromMnemonic(secrets.Mnemonic)
+	w = NewWalletFromSeed(secrets.Mnemonic)
 	w.Meta = ew.Meta
 	return
 }

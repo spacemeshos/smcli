@@ -48,7 +48,7 @@ generate a new, random mnemonic, or use an existing mnemonic.`,
 			fmt.Println(w.Mnemonic())
 		} else {
 			// try to use as a mnemonic
-			w = wallet.NewWalletFromMnemonic(text)
+			w = wallet.NewWalletFromSeed(text)
 		}
 
 		fmt.Print("Enter a secure password (optional but strongly recommended): ")

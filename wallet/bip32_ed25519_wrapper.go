@@ -4,7 +4,6 @@ import (
 	"crypto/ed25519"
 	"encoding/json"
 	"errors"
-	ed25519sm "github.com/spacemeshos/ed25519-recovery"
 	"github.com/spacemeshos/smcli/common"
 	"log"
 )
@@ -86,48 +85,47 @@ func (p HDPath) Index() uint32 {
 	return p[HDIndexSegment]
 }
 
-type BIP32EDKeyPair struct {
+type EDKeyPair struct {
 	DisplayName string `json:"displayName"`
 	Created     string `json:"created"`
 	// we assume the prefix is m/ and all keys are hardened
-	Path    HDPath             `json:"path"`
+	//Path    HDPath             `json:"path"`
 	Public  ed25519.PublicKey  `json:"publicKey"`
 	Private ed25519.PrivateKey `json:"secretKey"`
 	Salt    []byte
 }
 
-func NewMasterBIP32EDKeyPair(seed []byte) (*BIP32EDKeyPair, error) {
+func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
 	if len(seed) != ed25519.SeedSize {
 		return nil, ErrInvalidSeed
 	}
 	salt := []byte(common.DefaultEncryptionSalt)
 	privKey := ed25519.NewKeyFromSeed(seed)
 
-	return &BIP32EDKeyPair{
+	return &EDKeyPair{
 		Private: privKey,
 		Public:  privKey.Public().(ed25519.PublicKey),
-		Path:    HDPath{},
 		Salt:    salt,
 	}, nil
 }
 
-func (kp *BIP32EDKeyPair) NewChildKeyPair(childIdx uint32) (*BIP32EDKeyPair, error) {
-	if childIdx < BIP32HardenedKeyStart {
-		return nil, ErrNotHardened
-	}
-
-	// We still need to use the extended library for this, since the core library doesn't
-	// support this operation natively. Ideally we'd use a reliable, standard BIP32 derivation
-	// library for this, but I couldn't find one.
-	privKey := ed25519sm.NewDerivedKeyFromSeed(
-		kp.Private.Seed(),
-		uint64(childIdx),
-		kp.Salt,
-	)
-	return &BIP32EDKeyPair{
-		Private: privKey,
-		Public:  privKey.Public().(ed25519.PublicKey),
-		Path:    append(kp.Path, childIdx),
-		Salt:    kp.Salt,
-	}, nil
-}
+//func (kp *EDKeyPair) NewChildKeyPair(childIdx uint32) (*EDKeyPair, error) {
+//	if childIdx < BIP32HardenedKeyStart {
+//		return nil, ErrNotHardened
+//	}
+//
+//	// We still need to use the extended library for this, since the core library doesn't
+//	// support this operation natively. Ideally we'd use a reliable, standard BIP32 derivation
+//	// library for this, but I couldn't find one.
+//	privKey := ed25519sm.NewDerivedKeyFromSeed(
+//		kp.Private.Seed(),
+//		uint64(childIdx),
+//		kp.Salt,
+//	)
+//	return &EDKeyPair{
+//		Private: privKey,
+//		Public:  privKey.Public().(ed25519.PublicKey),
+//		Path:    append(kp.Path, childIdx),
+//		Salt:    kp.Salt,
+//	}, nil
+//}
