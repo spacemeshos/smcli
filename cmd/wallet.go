@@ -4,7 +4,6 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"github.com/hashicorp/go-secure-stdlib/password"
@@ -33,23 +32,10 @@ to quickly create a Cobra application.`,
 // createCmd represents the create command
 var createCmd = &cobra.Command{
 	Use:   "create",
-	Short: "Generate a new wallet file from a mnemonic",
-	Long: `Create a new wallet file using a 12- or 24-word mnemonic. You can choose to
-generate a new, random mnemonic, or use an existing mnemonic.`,
+	Short: "Generate a new wallet file",
+	Long:  `Create a new wallet file containing a single, randomly-generated account.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Print("Enter 12- or 24-word mnemonic (leave blank to generate a new one): ")
-		reader := bufio.NewReader(os.Stdin)
-		text, _ := reader.ReadString('\n')
-		var w *wallet.Wallet
-		// TODO: check if we see \r\n on windows
-		if text == "\n" {
-			w = wallet.NewWallet()
-			fmt.Println("SAVE THIS MNEMONIC IN A SAFE PLACE!")
-			fmt.Println(w.Mnemonic())
-		} else {
-			// try to use as a mnemonic
-			w = wallet.NewWalletFromSeed(text)
-		}
+		w := wallet.NewWallet()
 
 		fmt.Print("Enter a secure password (optional but strongly recommended): ")
 		password, err := password.Read(os.Stdin)
@@ -81,7 +67,7 @@ var readCmd = &cobra.Command{
 	Short: "Reads an existing wallet file",
 	Long: `This command can be used to verify whether an existing wallet file can be
 successfully read and decrypted, whether the password to open the file is correct, etc.
-It prints the mnemonic and accounts from the wallet file.`,
+It prints the accounts from the wallet file.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		walletFn := args[0]
@@ -101,7 +87,7 @@ It prints the mnemonic and accounts from the wallet file.`,
 		w, err := wk.Open(f)
 		cobra.CheckErr(err)
 
-		fmt.Println("Mnemonic:", w.Mnemonic())
+		//fmt.Println("Mnemonic:", w.Mnemonic())
 		fmt.Println("Accounts:")
 		for _, a := range w.Secrets.Accounts {
 			txt, err := json.Marshal(a)

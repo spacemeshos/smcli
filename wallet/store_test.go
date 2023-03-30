@@ -9,7 +9,6 @@ import (
 
 	"github.com/spacemeshos/smcli/wallet"
 	"github.com/stretchr/testify/assert"
-	"github.com/tyler-smith/go-bip39"
 )
 
 func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
@@ -23,9 +22,9 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		wallet.WithPbkdf2Password(password),
 	)
 
-	entropy, _ := bip39.NewEntropy(256)
-	mnemonic, _ := bip39.NewMnemonic(entropy)
-	w := wallet.NewWalletFromSeed(mnemonic)
+	//entropy, _ := bip39.NewEntropy(256)
+	//mnemonic, _ := bip39.NewMnemonic(entropy)
+	w := wallet.NewWallet()
 
 	file, err := os.CreateTemp("./", "test_wallet.*.json")
 	if err != nil {
@@ -39,7 +38,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 
 	w2, err := wKey.Open(file)
 	assert.NoError(t, err)
-	assert.Equal(t, w.Mnemonic(), w2.Mnemonic())
+	assert.Equal(t, w.Secrets.Accounts, w2.Secrets.Accounts)
 
 	// trying to open with a different wallet key, same pw and nonce, should work
 	wKey = wallet.NewKey(
@@ -48,7 +47,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 	)
 	w2, err = wKey.Open(file)
 	assert.NoError(t, err)
-	assert.Equal(t, w.Mnemonic(), w2.Mnemonic())
+	assert.Equal(t, w.Secrets.Accounts, w2.Secrets.Accounts)
 
 	// trying to open the same file with a different key or nonce should fail
 	password2 := password[:]
