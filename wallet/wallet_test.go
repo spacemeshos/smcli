@@ -36,8 +36,8 @@ func TestNewWalletFromSeed(t *testing.T) {
 
 	msg := []byte("hello world")
 	// Sanity check that the keypair works with the ed25519 library
-	sig := ed25519.Sign(keypair.Private, msg)
-	require.True(t, ed25519.Verify(keypair.Public, msg, sig))
+	sig := ed25519.Sign(ed25519.PrivateKey(keypair.Private), msg)
+	require.True(t, ed25519.Verify(ed25519.PublicKey(keypair.Public), msg, sig))
 
 	// create another wallet from the same seed
 	w2, err := wallet.NewWalletFromSeed(seed)
@@ -120,7 +120,9 @@ func TestNewWalletFromSeed(t *testing.T) {
 //}
 
 func benchmarkComputeKeyPair(n int, b *testing.B) {
-	wallet.NewWallet()
+	for i := 0; i < n; i++ {
+		wallet.NewRandomAccount()
+	}
 }
 
 //func benchmarkComputeKeyPair(n int, b *testing.B) {

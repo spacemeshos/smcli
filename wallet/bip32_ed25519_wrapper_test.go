@@ -23,12 +23,13 @@ func TestNewMasterBIP32EDKeyPair(t *testing.T) {
 	require.NotEmpty(t, masterKeyPair)
 
 	msg := []byte("master test")
-	sig := ed25519.Sign(masterKeyPair.Private, msg)
-	valid := ed25519.Verify(masterKeyPair.Public, msg, sig)
+	sig := ed25519.Sign(ed25519.PrivateKey(masterKeyPair.Private), msg)
+	valid := ed25519.Verify(ed25519.PublicKey(masterKeyPair.Public), msg, sig)
 	require.True(t, valid)
 
 	extractedPub, err := ed25519.ExtractPublicKey(msg, sig)
-	require.Equal(t, masterKeyPair.Public, extractedPub)
+	require.NoError(t, err)
+	require.Equal(t, masterKeyPair.Public, wallet.PublicKey(extractedPub))
 }
 
 //func TestNewChildKeyPair(t *testing.T) {

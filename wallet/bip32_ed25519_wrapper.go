@@ -50,20 +50,13 @@ func (p HDPath) MarshalJSON() ([]byte, error) {
 	return json.Marshal(p.String())
 }
 
-func (p HDPath) UnmarshalJSON(data []byte) error {
+func (p *HDPath) UnmarshalJSON(data []byte) (err error) {
 	var aux string
-	err := json.Unmarshal(data, &aux)
-	if err != nil {
+	if err = json.Unmarshal(data, &aux); err != nil {
 		return err
 	}
-	hdp, err := StringToHDPath(aux)
-	if err != nil {
-		return err
-	}
-	for i := range p {
-		p[i] = hdp[i]
-	}
-	return nil
+	*p, err = StringToHDPath(aux)
+	return
 }
 
 func (p HDPath) String() string {
@@ -86,55 +79,44 @@ func (p HDPath) Index() uint32 {
 	return p[HDIndexSegment]
 }
 
+type PublicKey ed25519.PublicKey
+
+func (k PublicKey) MarshalJSON() ([]byte, error) {
+	return json.Marshal(hex.EncodeToString(k))
+}
+
+func (k *PublicKey) UnmarshalJSON(data []byte) (err error) {
+	var hexString string
+	if err = json.Unmarshal(data, &hexString); err != nil {
+		return
+	}
+	*k, err = hex.DecodeString(hexString)
+	return
+}
+
+type PrivateKey ed25519.PublicKey
+
+func (k PrivateKey) MarshalJSON() ([]byte, error) {
+	return json.Marshal(hex.EncodeToString(k))
+}
+
+func (k *PrivateKey) UnmarshalJSON(data []byte) (err error) {
+	var hexString string
+	if err = json.Unmarshal(data, &hexString); err != nil {
+		return
+	}
+	*k, err = hex.DecodeString(hexString)
+	return
+}
+
 type EDKeyPair struct {
 	DisplayName string `json:"displayName"`
 	Created     string `json:"created"`
 	// we assume the prefix is m/ and all keys are hardened
 	//Path    HDPath             `json:"path"`
-	Public  ed25519.PublicKey  `json:"publicKey"`
-	Private ed25519.PrivateKey `json:"secretKey"`
-	Salt    []byte             `json:"salt"`
-}
-
-func (k *EDKeyPair) MarshalJSON() ([]byte, error) {
-	type Alias EDKeyPair
-	return json.Marshal(&struct {
-		Public  string `json:"publicKey"`
-		Private string `json:"secretKey"`
-		Salt    string `json:"salt"`
-		*Alias
-	}{
-		Public:  hex.EncodeToString(k.Public),
-		Private: hex.EncodeToString(k.Private),
-		Salt:    hex.EncodeToString(k.Salt),
-		Alias:   (*Alias)(k),
-	})
-}
-
-func (k *EDKeyPair) UnmarshalJSON(data []byte) error {
-	type Alias EDKeyPair
-	aux := &struct {
-		Public  string `json:"publicKey"`
-		Private string `json:"secretKey"`
-		Salt    string `json:"salt"`
-		*Alias
-	}{
-		Alias: (*Alias)(k),
-	}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
-	}
-	var err error
-	if k.Public, err = hex.DecodeString(aux.Public); err != nil {
-		return err
-	}
-	if k.Private, err = hex.DecodeString(aux.Private); err != nil {
-		return err
-	}
-	if k.Salt, err = hex.DecodeString(aux.Salt); err != nil {
-		return err
-	}
-	return nil
+	Public  PublicKey  `json:"publicKey"`
+	Private PrivateKey `json:"secretKey"`
+	Salt    []byte     `json:"salt"`
 }
 
 func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
@@ -142,13 +124,13 @@ func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
 		return nil, ErrInvalidSeed
 	}
 	salt := []byte(common.DefaultEncryptionSalt)
-	privKey := ed25519.NewKeyFromSeed(seed)
+	privKey := PrivateKey(ed25519.NewKeyFromSeed(seed))
 
 	return &EDKeyPair{
 		DisplayName: "Main Wallet",
 		Created:     common.NowTimeString(),
 		Private:     privKey,
-		Public:      privKey.Public().(ed25519.PublicKey),
+		Public:      PublicKey(ed25519.PrivateKey(privKey).Public().(ed25519.PublicKey)),
 		Salt:        salt,
 	}, nil
 }

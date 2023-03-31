@@ -2,6 +2,8 @@ package wallet
 
 import (
 	"crypto/ed25519"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/spacemeshos/smcli/common"
 	"github.com/tyler-smith/go-bip39"
@@ -41,11 +43,26 @@ type walletMetadata struct {
 	//RemoteAPI string
 }
 
+type hexEncodedCiphertext []byte
+
+func (c hexEncodedCiphertext) MarshalJSON() ([]byte, error) {
+	return json.Marshal(hex.EncodeToString(c))
+}
+
+func (c *hexEncodedCiphertext) UnmarshalJSON(data []byte) (err error) {
+	var hexString string
+	if err = json.Unmarshal(data, &hexString); err != nil {
+		return
+	}
+	*c, err = hex.DecodeString(hexString)
+	return
+}
+
 type walletSecretsEncrypted struct {
-	Cipher       string `json:"cipher"`
-	CipherText   string `json:"cipherText"`
+	Cipher       string               `json:"cipher"`
+	CipherText   hexEncodedCiphertext `json:"cipherText"`
 	CipherParams struct {
-		IV string `json:"iv"`
+		IV hexEncodedCiphertext `json:"iv"`
 	} `json:"cipherParams"`
 	KDF       string `json:"kdf"`
 	KDFParams struct {
@@ -83,17 +100,21 @@ func NewMultiWallet(n int) (*Wallet, error) {
 	}
 	var accounts []*EDKeyPair
 	for i := 0; i < n; i++ {
-		e, err := bip39.NewEntropy(ed25519.SeedSize * 8)
-		if err != nil {
-			return nil, err
-		}
-		a, err := accountFromSeed(e)
+		a, err := NewRandomAccount()
 		if err != nil {
 			return nil, err
 		}
 		accounts = append(accounts, a)
 	}
 	return walletFromAccounts(accounts)
+}
+
+func NewRandomAccount() (*EDKeyPair, error) {
+	e, err := bip39.NewEntropy(ed25519.SeedSize * 8)
+	if err != nil {
+		return nil, err
+	}
+	return accountFromSeed(e)
 }
 
 // NewWalletFromSeed creates a new wallet containing one account generated using the given seed.

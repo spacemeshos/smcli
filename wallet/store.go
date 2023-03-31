@@ -122,34 +122,38 @@ func WithPbkdf2Password(password []byte) WalletKeyOpt {
 }
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html#71-encryption-types-to-use
-func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte) {
+func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte, err error) {
 	block, err := aes.NewCipher(k.key)
-	cobra.CheckErr(err)
+	if err != nil {
+		return
+	}
 
 	// Using default options for AES-GCM as recommended by the godoc.
 	// For reference, NonceSize is 12 bytes, and TagSize is 16 bytes:
 	// https://cs.opensource.google/go/go/+/refs/tags/go1.19.2:src/crypto/cipher/gcm.go;l=153-158
 	aesgcm, err := cipher.NewGCM(block)
-	nonce = make([]byte, aesgcm.NonceSize())
+	if err != nil {
+		return
+	}
 	hash := hmac.New(sha512.New, k.key)
-	hash.Write(plaintext)
-	nonce = hash.Sum(nil)[:aesgcm.NonceSize()]
+	nonce = hash.Sum(plaintext)[:aesgcm.NonceSize()]
 
-	cobra.CheckErr(err)
 	ciphertext = aesgcm.Seal(nil, nonce, plaintext, nil)
-	return ciphertext, nonce
+	return
 }
 
 func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, err error) {
 	block, err := aes.NewCipher(k.key)
-	cobra.CheckErr(err)
-	aesgcm, err := cipher.NewGCM(block)
-	cobra.CheckErr(err)
-
-	if plaintext, err = aesgcm.Open(nil, nonce, ciphertext, nil); err != nil {
-		return nil, err
+	if err != nil {
+		return
 	}
-	return plaintext, nil
+	aesgcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return
+	}
+
+	plaintext, err = aesgcm.Open(nil, nonce, ciphertext, nil)
+	return
 }
 
 func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
@@ -161,17 +165,19 @@ func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
 	if err = json.Unmarshal(jsonWallet, ew); err != nil {
 		return nil, err
 	}
+	// this returns an EOF error for some reason
+	//if err = json.NewDecoder(file).Decode(ew); err != nil {
+	//	return
+	//}
 
 	// set the salt, and warn if it's different
 	var salt [Pbkdf2SaltBytesLen]byte
-	saltTmp, err := hex.DecodeString(ew.Secrets.KDFParams.Salt)
-	copy(salt[:], saltTmp)
-	if err != nil {
-		return nil, err
+	if _, err = hex.Decode(salt[:], []byte(ew.Secrets.KDFParams.Salt)); err != nil {
+		return
 	}
 	if k.salt == nil {
 		WithSalt(salt)(k)
-	} else if !bytes.Equal(saltTmp, k.salt) {
+	} else if !bytes.Equal(salt[:], k.salt) {
 		log.Printf("wallet key salt does not match wallet file salt")
 	}
 	WithIterations(ew.Secrets.KDFParams.Iterations)(k)
@@ -179,24 +185,18 @@ func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
 		log.Println("Warning: wallet file iterations count lower than recommended")
 	}
 
-	nonce, err := hex.DecodeString(ew.Secrets.CipherParams.IV)
-	if err != nil {
-		return nil, err
-	}
-	encWallet, err := hex.DecodeString(ew.Secrets.CipherText)
-	if err != nil {
-		return nil, err
-	}
+	nonce := ew.Secrets.CipherParams.IV
+	encWallet := ew.Secrets.CipherText
 
 	// TODO: before decrypting, check that other meta params match
 	plaintext, err := k.decrypt(encWallet, nonce)
 	if err != nil {
-		return nil, err
+		return
 	}
 	log.Println("Decrypted JSON data:", string(plaintext))
 	secrets := &walletSecrets{}
 	if err = json.Unmarshal(plaintext, secrets); err != nil {
-		return nil, err
+		return
 	}
 
 	// we have everything we need, construct and return the wallet.
@@ -207,22 +207,25 @@ func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
 	return
 }
 
-func (k *WalletKey) Export(file *os.File, w *Wallet) error {
+func (k *WalletKey) Export(file *os.File, w *Wallet) (err error) {
 	// encrypt the secrets
 	plaintext, err := json.Marshal(w.Secrets)
 	if err != nil {
-		return err
+		return
 	}
-	ciphertext, nonce := k.encrypt(plaintext)
+	ciphertext, nonce, err := k.encrypt(plaintext)
+	if err != nil {
+		return
+	}
 	ew := &EncryptedWalletFile{
 		Meta: w.Meta,
 		Secrets: walletSecretsEncrypted{
 			Cipher:     "AES-GCM",
-			CipherText: hex.EncodeToString(ciphertext),
+			CipherText: ciphertext,
 			CipherParams: struct {
-				IV string `json:"iv"`
+				IV hexEncodedCiphertext `json:"iv"`
 			}{
-				IV: hex.EncodeToString(nonce),
+				IV: nonce,
 			},
 			KDF: "PBKDF2",
 			KDFParams: struct {
@@ -238,12 +241,5 @@ func (k *WalletKey) Export(file *os.File, w *Wallet) error {
 			},
 		},
 	}
-	jsonWallet, err := json.Marshal(ew)
-	if err != nil {
-		return err
-	}
-	if _, err := file.Write(jsonWallet); err != nil {
-		return err
-	}
-	return nil
+	return json.NewEncoder(file).Encode(ew)
 }

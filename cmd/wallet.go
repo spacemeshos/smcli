@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/spacemeshos/smcli/common"
@@ -57,15 +58,21 @@ var createCmd = &cobra.Command{
 
 		// Make sure we're not overwriting an existing wallet (this should not happen)
 		walletFn := common.WalletFile()
-		f, _ := os.Open(walletFn)
-		if f != nil {
-			log.Fatalln("Wallet file already exists", walletFn)
+		_, err = os.Stat(walletFn)
+		switch {
+		case errors.Is(err, os.ErrNotExist):
+			// all fine
+		case err == nil:
+			log.Fatalln("Wallet file already exists")
+		default:
+			log.Fatalf("Error opening %s: %v\n", walletFn, err)
 		}
 
 		// Now open for writing
-		f, err = os.OpenFile(walletFn, os.O_WRONLY|os.O_CREATE, 0600)
+		f2, err := os.OpenFile(walletFn, os.O_WRONLY|os.O_CREATE, 0600)
 		cobra.CheckErr(err)
-		cobra.CheckErr(wk.Export(f, w))
+		defer f2.Close()
+		cobra.CheckErr(wk.Export(f2, w))
 
 		fmt.Printf("Wallet saved to %s. BACK UP THIS FILE NOW!\n", walletFn)
 	},
@@ -84,6 +91,7 @@ It prints the accounts from the wallet file.`,
 
 		// make sure the file exists
 		f, err := os.Open(walletFn)
+		defer f.Close()
 		cobra.CheckErr(err)
 
 		// get the password
@@ -100,9 +108,9 @@ It prints the accounts from the wallet file.`,
 		//fmt.Println("Mnemonic:", w.Mnemonic())
 		fmt.Println("Accounts:")
 		for _, a := range w.Secrets.Accounts {
-			txt, err := json.Marshal(a)
+			err := json.NewEncoder(os.Stdout).Encode(a)
 			cobra.CheckErr(err)
-			fmt.Println(string(txt))
+			fmt.Println()
 		}
 	},
 }
