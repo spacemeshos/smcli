@@ -7,19 +7,19 @@ import (
 	"testing"
 
 	"github.com/spacemeshos/smcli/wallet"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNewWallet(t *testing.T) {
 	w := wallet.NewWallet()
-	assert.NotNil(t, w)
+	require.NotNil(t, w)
 }
 
 func TestNewWalletFromSeed(t *testing.T) {
 	seed := []byte("spacemesh is the best blockchain")
 	w := wallet.NewWalletFromSeed(seed)
-	assert.NotNil(t, w)
-	assert.Len(t, w.Secrets.Accounts, 1)
+	require.NotNil(t, w)
+	require.Len(t, w.Secrets.Accounts, 1)
 	keypair := w.Secrets.Accounts[0]
 
 	expPubKey :=
@@ -29,18 +29,20 @@ func TestNewWalletFromSeed(t *testing.T) {
 
 	actualPubKey := hex.EncodeToString(keypair.Public)
 	actualPrivKey := hex.EncodeToString(keypair.Private)
-	assert.Equal(t, expPubKey, actualPubKey)
-	assert.Equal(t, expPrivKey, actualPrivKey)
+	require.Equal(t, expPubKey, actualPubKey)
+	require.Equal(t, expPrivKey, actualPrivKey)
 
 	msg := []byte("hello world")
 	// Sanity check that the keypair works with the ed25519 library
 	sig := ed25519.Sign(keypair.Private, msg)
-	assert.True(t, ed25519.Verify(keypair.Public, msg, sig))
+	require.True(t, ed25519.Verify(keypair.Public, msg, sig))
 
 	// create another wallet from the same seed
 	w2 := wallet.NewWalletFromSeed(seed)
-	assert.NotNil(t, w2)
-	assert.Equal(t, w.Secrets.Accounts, w2.Secrets.Accounts)
+	require.NotNil(t, w2)
+	require.Equal(t, w.Secrets.Accounts[0].Public, w2.Secrets.Accounts[0].Public)
+	require.Equal(t, w.Secrets.Accounts[0].Private, w2.Secrets.Accounts[0].Private)
+	require.Equal(t, w.Secrets.Accounts[0].Salt, w2.Secrets.Accounts[0].Salt)
 }
 
 //func TestWalletFromNewMnemonic(t *testing.T) {
@@ -48,17 +50,17 @@ func TestNewWalletFromSeed(t *testing.T) {
 //	mnemonic, _ := bip39.NewMnemonic(entropy)
 //	w := wallet.NewWalletFromSeed(mnemonic)
 //
-//	assert.NotNil(t, w)
-//	assert.Equal(t, mnemonic, w.Mnemonic())
+//	require.NotNil(t, w)
+//	require.Equal(t, mnemonic, w.Mnemonic())
 //}
 
 //func TestWalletFromGivenMnemonic(t *testing.T) {
 //	mnemonic := "film theme cheese broken kingdom destroy inch ready wear inspire shove pudding"
 //	w := wallet.NewWalletFromSeed(mnemonic)
 //	keyPath, err := wallet.StringToHDPath("m/44'/540'/0'/0'/0'")
-//	assert.NoError(t, err)
+//	require.NoError(t, err)
 //	keyPair, err := w.ComputeKeyPair(keyPath)
-//	assert.NoError(t, err)
+//	require.NoError(t, err)
 //	expPubKey :=
 //		"205d8d4e458b163d5ba15ac712951d5659cc51379e7e0ad13acc97303aa85093"
 //	expPrivKey :=
@@ -66,13 +68,13 @@ func TestNewWalletFromSeed(t *testing.T) {
 //
 //	actualPubKey := hex.EncodeToString(keyPair.Public)
 //	actualPrivKey := hex.EncodeToString(keyPair.Private)
-//	assert.Equal(t, expPubKey, actualPubKey)
-//	assert.Equal(t, expPrivKey, actualPrivKey)
+//	require.Equal(t, expPubKey, actualPubKey)
+//	require.Equal(t, expPrivKey, actualPrivKey)
 //
 //	msg := []byte("hello world")
 //	// Sanity check that the keypair works with the standard ed25519 library
 //	sig := ed25519.Sign(keyPair.Private, msg)
-//	assert.True(t, ed25519.Verify(keyPair.Public, msg, sig))
+//	require.True(t, ed25519.Verify(keyPair.Public, msg, sig))
 //}
 
 //func TestKeysInWalletMaintainExpectedPath(t *testing.T) {
@@ -83,8 +85,8 @@ func TestNewWalletFromSeed(t *testing.T) {
 //	for i := 0; i < 100; i++ {
 //		path, _ := wallet.StringToHDPath(fmt.Sprintf("m/44'/540'/%d'/%d'/%d'", i, i, i))
 //		keyPair, err := w.ComputeKeyPair(path)
-//		assert.NoError(t, err)
-//		assert.Equal(t, path, keyPair.Path)
+//		require.NoError(t, err)
+//		require.Equal(t, path, keyPair.Path)
 //	}
 //}
 
@@ -96,13 +98,13 @@ func TestNewWalletFromSeed(t *testing.T) {
 //
 //	path, _ := wallet.StringToHDPath("m/44'/540'")
 //	keyPair, err := w.ComputeKeyPair(path)
-//	assert.NoError(t, err)
-//	assert.Equal(t, keyPair.Salt, w.Salt())
+//	require.NoError(t, err)
+//	require.Equal(t, keyPair.Salt, w.Salt())
 //	// ... and try with a different length path
 //	path, _ = wallet.StringToHDPath("m/44'/540'/0'")
 //	keyPair, err = w.ComputeKeyPair(path)
-//	assert.NoError(t, err)
-//	assert.Equal(t, keyPair.Salt, w.Salt())
+//	require.NoError(t, err)
+//	require.Equal(t, keyPair.Salt, w.Salt())
 //}
 
 //func TestComputeKeyPairFailsForUnhardenedPathSegment(t *testing.T) {
@@ -111,7 +113,7 @@ func TestNewWalletFromSeed(t *testing.T) {
 //	w := wallet.NewWalletFromSeed(mnemonic)
 //	path, _ := wallet.StringToHDPath("m/44'/540'/0'/0'/0")
 //	_, err := w.ComputeKeyPair(path)
-//	assert.Error(t, err)
+//	require.Error(t, err)
 //}
 
 func benchmarkComputeKeyPair(n int, b *testing.B) {

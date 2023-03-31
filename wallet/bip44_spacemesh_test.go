@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	"github.com/spacemeshos/smcli/wallet"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHDPathToString(t *testing.T) {
 	s := wallet.HDPathToString(wallet.HDPath{wallet.BIP32HardenedKeyStart | 44, wallet.BIP32HardenedKeyStart | 540, 0, 0, 0})
-	assert.Equal(t, "m/44'/540'/0/0/0", s)
+	require.Equal(t, "m/44'/540'/0/0/0", s)
 }
 
 func TestStringToHDPath(t *testing.T) {
@@ -28,8 +28,8 @@ func TestStringToHDPath(t *testing.T) {
 	for _, tv := range testVectors {
 		t.Run(tv.path, func(t *testing.T) {
 			p, err := wallet.StringToHDPath(tv.path)
-			assert.NoError(t, err)
-			assert.Equal(t, tv.expected, p)
+			require.NoError(t, err)
+			require.Equal(t, tv.expected, p)
 		})
 	}
 }

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/spacemeshos/smcli/wallet"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
@@ -34,11 +34,11 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 
 	fmt.Println(file.Name())
 	err = wKey.Export(file, w)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	w2, err := wKey.Open(file)
-	assert.NoError(t, err)
-	assert.Equal(t, w.Secrets.Accounts, w2.Secrets.Accounts)
+	require.NoError(t, err)
+	require.Equal(t, w.Secrets.Accounts, w2.Secrets.Accounts)
 
 	// trying to open with a different wallet key, same pw and nonce, should work
 	wKey = wallet.NewKey(
@@ -46,8 +46,8 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		wallet.WithPbkdf2Password(password),
 	)
 	w2, err = wKey.Open(file)
-	assert.NoError(t, err)
-	assert.Equal(t, w.Secrets.Accounts, w2.Secrets.Accounts)
+	require.NoError(t, err)
+	require.Equal(t, w.Secrets.Accounts, w2.Secrets.Accounts)
 
 	// trying to open the same file with a different key or nonce should fail
 	password2 := password[:]
@@ -59,7 +59,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		wallet.WithPbkdf2Password(password2),
 	)
 	_, err = wKey.Open(file)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// right password, wrong salt
 	copy(salt2[:], saltSlice)
@@ -69,7 +69,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		wallet.WithPbkdf2Password(password),
 	)
 	_, err = wKey.Open(file)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// both wrong
 	wKey = wallet.NewKey(
@@ -77,5 +77,5 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		wallet.WithPbkdf2Password(password2),
 	)
 	_, err = wKey.Open(file)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
