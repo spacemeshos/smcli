@@ -18,6 +18,9 @@ const (
 	DefaultNodeVersion    = "v0.2.16-beta.0"
 	NetworkDiscoveryUrl   = "https://discover.spacemesh.io/networks.json"
 	DefaultEncryptionSalt = "Spacemesh blockmesh"
+	// MaxAccountsPerWallet is the maximum number of accounts that a single wallet file may contain.
+	// It's relatively arbitrary but we need some limit.
+	MaxAccountsPerWallet = 128
 )
 
 func NodeDownloadUrl() string {

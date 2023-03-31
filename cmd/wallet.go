@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"log"
 	"os"
+	"strconv"
 )
 
 // walletCmd represents the wallet command
@@ -31,11 +32,20 @@ to quickly create a Cobra application.`,
 
 // createCmd represents the create command
 var createCmd = &cobra.Command{
-	Use:   "create",
+	Use:   "create [numaccounts]",
 	Short: "Generate a new wallet file",
-	Long:  `Create a new wallet file containing a single, randomly-generated account.`,
+	Long:  `Create a new wallet file containing one or more randomly-generated accounts.`,
+	Args:  cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		w := wallet.NewWallet()
+		n := 1
+		if len(args) > 0 {
+			tmpN, err := strconv.ParseInt(args[0], 10, 16)
+			cobra.CheckErr(err)
+			n = int(tmpN)
+		}
+
+		w, err := wallet.NewMultiWallet(n)
+		cobra.CheckErr(err)
 
 		fmt.Print("Enter a secure password (optional but strongly recommended): ")
 		password, err := password.Read(os.Stdin)

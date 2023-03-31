@@ -11,13 +11,15 @@ import (
 )
 
 func TestNewWallet(t *testing.T) {
-	w := wallet.NewWallet()
+	w, err := wallet.NewWallet()
+	require.NoError(t, err)
 	require.NotNil(t, w)
 }
 
 func TestNewWalletFromSeed(t *testing.T) {
 	seed := []byte("spacemesh is the best blockchain")
-	w := wallet.NewWalletFromSeed(seed)
+	w, err := wallet.NewWalletFromSeed(seed)
+	require.NoError(t, err)
 	require.NotNil(t, w)
 	require.Len(t, w.Secrets.Accounts, 1)
 	keypair := w.Secrets.Accounts[0]
@@ -38,7 +40,8 @@ func TestNewWalletFromSeed(t *testing.T) {
 	require.True(t, ed25519.Verify(keypair.Public, msg, sig))
 
 	// create another wallet from the same seed
-	w2 := wallet.NewWalletFromSeed(seed)
+	w2, err := wallet.NewWalletFromSeed(seed)
+	require.NoError(t, err)
 	require.NotNil(t, w2)
 	require.Equal(t, w.Secrets.Accounts[0].Public, w2.Secrets.Accounts[0].Public)
 	require.Equal(t, w.Secrets.Accounts[0].Private, w2.Secrets.Accounts[0].Private)

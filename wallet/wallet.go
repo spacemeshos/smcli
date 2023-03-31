@@ -2,8 +2,8 @@ package wallet
 
 import (
 	"crypto/ed25519"
+	"fmt"
 	"github.com/spacemeshos/smcli/common"
-	"github.com/spf13/cobra"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -71,19 +71,41 @@ type walletSecrets struct {
 //	Address  string `json:"address"`
 //}
 
-// NewWallet creates a brand new wallet with a random seed.
-func NewWallet() *Wallet {
-	e, _ := bip39.NewEntropy(ed25519.SeedSize * 8)
-	return NewWalletFromSeed(e)
+// NewWallet creates a new wallet containing one account generated using a random seed.
+func NewWallet() (*Wallet, error) {
+	return NewMultiWallet(1)
 }
 
-// NewWalletFromSeed creates a new wallet from the given seed.
-func NewWalletFromSeed(seed []byte) *Wallet {
-	// Arbitrarily taking the first 32 bytes as the seed for the private key.
-	// Not sure if this is the correct approach.
-	masterKeyPair, err := NewMasterKeyPair(seed[:ed25519.SeedSize])
-	cobra.CheckErr(err)
+// NewMultiWallet creates a new wallet containing multiple accounts generated using random seeds.
+func NewMultiWallet(n int) (*Wallet, error) {
+	if n < 0 || n > common.MaxAccountsPerWallet {
+		return nil, fmt.Errorf("invalid number of accounts")
+	}
+	var accounts []*EDKeyPair
+	for i := 0; i < n; i++ {
+		e, err := bip39.NewEntropy(ed25519.SeedSize * 8)
+		if err != nil {
+			return nil, err
+		}
+		a, err := accountFromSeed(e)
+		if err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, a)
+	}
+	return walletFromAccounts(accounts)
+}
 
+// NewWalletFromSeed creates a new wallet containing one account generated using the given seed.
+func NewWalletFromSeed(seed []byte) (*Wallet, error) {
+	kp, err := accountFromSeed(seed)
+	if err != nil {
+		return nil, err
+	}
+	return walletFromAccounts([]*EDKeyPair{kp})
+}
+
+func walletFromAccounts(kp []*EDKeyPair) (*Wallet, error) {
 	displayName := "Main Wallet"
 	createTime := common.NowTimeString()
 
@@ -94,30 +116,27 @@ func NewWalletFromSeed(seed []byte) *Wallet {
 			// TODO: set correctly
 			GenesisID: "",
 			Meta: MetaMetadata{
-				Salt: string(masterKeyPair.Salt),
+				Salt: common.DefaultEncryptionSalt,
 			},
 		},
 		Secrets: walletSecrets{
 			//Mnemonic: mnemonic,
-			Accounts: []*EDKeyPair{
-				masterKeyPair,
-			},
+			Accounts: kp,
 		},
 		//masterKeypair: masterKeyPair,
 	}
-
-	// Add the first key pair.
-	// We only use the master key pair as a seed to generate child addresses.
-	// We don't store the master key pair as an address.
-	// Go ahead and derive the first child address.
-	// To do this, we need to construct the appropriate path first.
-	//path := append(NewPath(), BIP44Account(0))
-	//keyPair, err := w.ComputeKeyPair(path)
-	//cobra.CheckErr(err)
-	//w.Secrets.Accounts = []*EDKeyPair{keyPair}
-
-	return w
+	return w, nil
 }
+
+// accountFromSeed creates a new account from the given seed.
+func accountFromSeed(seed []byte) (*EDKeyPair, error) {
+	masterKeyPair, err := NewMasterKeyPair(seed[:ed25519.SeedSize])
+	if err != nil {
+		return nil, err
+	}
+	return masterKeyPair, nil
+}
+
 func (w *Wallet) Salt() []byte {
 	return []byte(w.Meta.Meta.Salt)
 }
