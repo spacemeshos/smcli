@@ -157,18 +157,10 @@ func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, 
 }
 
 func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
-	jsonWallet, err := os.ReadFile(file.Name())
-	if err != nil {
-		return nil, err
-	}
 	ew := &EncryptedWalletFile{}
-	if err = json.Unmarshal(jsonWallet, ew); err != nil {
-		return nil, err
+	if err = json.NewDecoder(file).Decode(ew); err != nil {
+		return
 	}
-	// this returns an EOF error for some reason
-	//if err = json.NewDecoder(file).Decode(ew); err != nil {
-	//	return
-	//}
 
 	// set the salt, and warn if it's different
 	var salt [Pbkdf2SaltBytesLen]byte

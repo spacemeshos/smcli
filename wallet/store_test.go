@@ -3,6 +3,7 @@ package wallet_test
 import (
 	"encoding/hex"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"testing"
@@ -37,6 +38,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 	err = wKey.Export(file, w)
 	require.NoError(t, err)
 
+	file.Seek(0, io.SeekStart)
 	w2, err := wKey.Open(file)
 	require.NoError(t, err)
 	require.Equal(t, w.Secrets.Accounts, w2.Secrets.Accounts)
@@ -46,6 +48,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		wallet.WithSalt(salt),
 		wallet.WithPbkdf2Password(password),
 	)
+	file.Seek(0, io.SeekStart)
 	w2, err = wKey.Open(file)
 	require.NoError(t, err)
 	require.Equal(t, w.Secrets.Accounts, w2.Secrets.Accounts)
@@ -59,6 +62,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		wallet.WithSalt(salt),
 		wallet.WithPbkdf2Password(password2),
 	)
+	file.Seek(0, io.SeekStart)
 	_, err = wKey.Open(file)
 	require.Error(t, err)
 
@@ -69,6 +73,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		wallet.WithSalt(salt2),
 		wallet.WithPbkdf2Password(password),
 	)
+	file.Seek(0, io.SeekStart)
 	_, err = wKey.Open(file)
 	require.Error(t, err)
 
@@ -77,6 +82,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		wallet.WithSalt(salt2),
 		wallet.WithPbkdf2Password(password2),
 	)
+	file.Seek(0, io.SeekStart)
 	_, err = wKey.Open(file)
 	require.Error(t, err)
 }
