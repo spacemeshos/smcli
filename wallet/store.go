@@ -7,8 +7,8 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha512"
-	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 
@@ -163,13 +163,14 @@ func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
 	}
 
 	// set the salt, and warn if it's different
-	var salt [Pbkdf2SaltBytesLen]byte
-	if _, err = hex.Decode(salt[:], []byte(ew.Secrets.KDFParams.Salt)); err != nil {
-		return
-	}
 	if k.salt == nil {
+		var salt [Pbkdf2SaltBytesLen]byte
+		copy(salt[:], ew.Secrets.KDFParams.Salt)
+		if !bytes.Equal(salt[:], ew.Secrets.KDFParams.Salt) {
+			return nil, fmt.Errorf("error reading encrypted wallet file salt, check salt length")
+		}
 		WithSalt(salt)(k)
-	} else if !bytes.Equal(salt[:], k.salt) {
+	} else if !bytes.Equal(ew.Secrets.KDFParams.Salt, k.salt) {
 		log.Printf("wallet key salt does not match wallet file salt")
 	}
 	WithIterations(ew.Secrets.KDFParams.Iterations)(k)
@@ -221,14 +222,14 @@ func (k *WalletKey) Export(file *os.File, w *Wallet) (err error) {
 			},
 			KDF: "PBKDF2",
 			KDFParams: struct {
-				DKLen      int    `json:"dklen"`
-				Hash       string `json:"hash"`
-				Salt       string `json:"salt"`
-				Iterations int    `json:"iterations"`
+				DKLen      int                  `json:"dklen"`
+				Hash       string               `json:"hash"`
+				Salt       hexEncodedCiphertext `json:"salt"`
+				Iterations int                  `json:"iterations"`
 			}{
 				DKLen:      Pbkdf2Dklen,
 				Hash:       "SHA-256",
-				Salt:       hex.EncodeToString(k.salt),
+				Salt:       k.salt,
 				Iterations: Pbkdf2Iterations,
 			},
 		},

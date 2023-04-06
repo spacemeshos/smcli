@@ -66,10 +66,10 @@ type walletSecretsEncrypted struct {
 	} `json:"cipherParams"`
 	KDF       string `json:"kdf"`
 	KDFParams struct {
-		DKLen      int    `json:"dklen"`
-		Hash       string `json:"hash"`
-		Salt       string `json:"salt"`
-		Iterations int    `json:"iterations"`
+		DKLen      int                  `json:"dklen"`
+		Hash       string               `json:"hash"`
+		Salt       hexEncodedCiphertext `json:"salt"`
+		Iterations int                  `json:"iterations"`
 	} `json:"kdfparams"`
 }
 
