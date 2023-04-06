@@ -3,6 +3,7 @@ name: Build and Release
 on:
   release:
     types: [created]
+  workflow_dispatch:
 
 jobs:
   releases-matrix:
@@ -12,7 +13,7 @@ jobs:
       matrix:
         # build and publish in parallel: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64
         goos: [linux, windows, darwin]
-        goarch: ["386", amd64, arm64]
+        goarch: [amd64, arm64]
         exclude:
           - goarch: arm64
             goos: windows
