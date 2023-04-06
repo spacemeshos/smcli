@@ -3,7 +3,6 @@ name: Build and Release
 on:
   release:
     types: [created]
-  workflow_dispatch:
 
 jobs:
   releases-matrix:
@@ -25,4 +24,5 @@ jobs:
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
         binary_name: sm
-        #asset_name: "smcli-${{ env.BUILD_TIME }}-${{ matrix.goos }}-${{ matrix.goarch }}"
+        asset_name: "smcli-${{ github.event.release.tag_name }}-${{ matrix.goos }}-${{ matrix.goarch }}"
+        extra_files: LICENSE README.md
