@@ -37,7 +37,7 @@ func BIP44HardenedChain(chain uint32) uint32 {
 	return BIP32HardenedKeyStart | chain
 }
 
-// After the Hardened Chain level comes the address indeces, as of now, we don't
+// After the Hardened Chain level comes the address indices, as of now, we don't
 // support un-hardened derivation so we'll continue our deviation from the spec
 // here. All addresses will be hardened.
 // (m/44'/540'/account'/chain'/address_index')
@@ -59,8 +59,7 @@ func IsPathCompletelyHardened(path HDPath) bool {
 func HDPathToString(path HDPath) string {
 	s := "m"
 	for _, p := range path {
-
-		if p > BIP32HardenedKeyStart {
+		if p >= BIP32HardenedKeyStart {
 			s += "/" + fmt.Sprint(p-BIP32HardenedKeyStart) + "'"
 		} else {
 			s += "/" + fmt.Sprint(p)
@@ -76,7 +75,7 @@ func parseUint(s string) uint {
 }
 
 // StringToHDPath converts a BIP44 HD path string of the form
-// (m/44'/540'/account'/chain'/address_index') to it's uint32 slice representation
+// (m/44'/540'/account'/chain'/address_index') to its uint32 slice representation
 func StringToHDPath(s string) (HDPath, error) {
 	// regex of the form m/44'/540'/account'/chain'/address_index'
 	rWholePath := regexp.MustCompile(`^m(\/\d+'?)+$`)

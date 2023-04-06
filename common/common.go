@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/spacemeshos/smcli/util"
 
@@ -14,8 +15,12 @@ import (
 )
 
 const (
-	DefaultNodeVersion  = "v0.2.16-beta.0"
-	NetworkDiscoveryUrl = "https://discover.spacemesh.io/networks.json"
+	DefaultNodeVersion    = "v0.2.16-beta.0"
+	NetworkDiscoveryUrl   = "https://discover.spacemesh.io/networks.json"
+	DefaultEncryptionSalt = "Spacemesh blockmesh"
+	// MaxAccountsPerWallet is the maximum number of accounts that a single wallet file may contain.
+	// It's relatively arbitrary but we need some limit.
+	MaxAccountsPerWallet = 128
 )
 
 func NodeDownloadUrl() string {
@@ -43,6 +48,10 @@ func SystemType() string {
 	default:
 		panic(fmt.Sprintf("unsupported os: %s", os))
 	}
+}
+
+func NowTimeString() string {
+	return time.Now().UTC().Format("2006-01-02T15-04-05.000") + "Z"
 }
 
 // .spacemesh
@@ -91,7 +100,7 @@ func StateFile() string {
 	return filepath.Join(DotDirectory(), "state.json")
 }
 func WalletFile() string {
-	return filepath.Join(DotDirectory(), "wallet.json")
+	return filepath.Join(DotDirectory(), "wallet_"+NowTimeString()+".json")
 }
 func LogDirectory() string {
 	return filepath.Join(DotDirectory(), "logs")
@@ -114,7 +123,6 @@ func OpenNodeLogFile() (*os.File, error) {
 }
 
 func InitNodeConfig(filePath string) {
-
 	type NetworkDiscoveryResp []struct {
 		NetName              string `json:"netName"`
 		NetID                int    `json:"netID"`

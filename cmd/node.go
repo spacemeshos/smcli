@@ -18,7 +18,8 @@ var nodeCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(nodeCmd)
+	// Temporarily disabled
+	//rootCmd.AddCommand(nodeCmd)
 
 	// Here you will define your flags and configuration settings.
 
