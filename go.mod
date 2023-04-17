@@ -3,9 +3,11 @@ module github.com/spacemeshos/smcli
 go 1.18
 
 require (
-	github.com/spacemeshos/ed25519-recovery v0.2.0
+	github.com/spacemeshos/smkeys v0.1.0
 	github.com/stretchr/testify v1.8.2
 )
+
+replace github.com/spacemeshos/smkeys => ../smkeys
 
 require github.com/rogpeppe/go-internal v1.9.0 // indirect
 

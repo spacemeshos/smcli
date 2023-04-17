@@ -1,10 +1,10 @@
 package wallet_test
 
 import (
+	"crypto/ed25519"
 	"crypto/sha512"
 	"testing"
 
-	"github.com/spacemeshos/ed25519-recovery"
 	"github.com/spacemeshos/smcli/wallet"
 	"github.com/stretchr/testify/require"
 	"github.com/xdg-go/pbkdf2"
@@ -26,25 +26,17 @@ func TestNewMasterBIP32EDKeyPair(t *testing.T) {
 	sig := ed25519.Sign(ed25519.PrivateKey(masterKeyPair.Private), msg)
 	valid := ed25519.Verify(ed25519.PublicKey(masterKeyPair.Public), msg, sig)
 	require.True(t, valid)
-
-	extractedPub, err := ed25519.ExtractPublicKey(msg, sig)
-	require.NoError(t, err)
-	require.Equal(t, masterKeyPair.Public, wallet.PublicKey(extractedPub))
 }
 
-//func TestNewChildKeyPair(t *testing.T) {
-//	masterKeyPair, _ := generateTestMasterKeyPair()
-//
-//	childKeyPair, err := masterKeyPair.NewChildKeyPair(wallet.BIP44Purpose())
-//
-//	require.NoError(t, err)
-//	require.NotEmpty(t, childKeyPair)
-//
-//	msg := []byte("child test")
-//	sig := ed25519.Sign(childKeyPair.Private, msg)
-//	valid := ed25519.Verify(childKeyPair.Public, msg, sig)
-//	require.True(t, valid)
-//
-//	extractedPub, err := ed25519.ExtractPublicKey(msg, sig)
-//	require.Equal(t, childKeyPair.Public, extractedPub)
-//}
+func TestNewChildKeyPair(t *testing.T) {
+	masterKeyPair, _ := generateTestMasterKeyPair()
+
+	childKeyPair, err := masterKeyPair.NewChildKeyPair(0)
+	require.NoError(t, err)
+	require.NotEmpty(t, childKeyPair)
+
+	msg := []byte("child test")
+	sig := ed25519.Sign(ed25519.PrivateKey(childKeyPair.Private), msg)
+	valid := ed25519.Verify(ed25519.PublicKey(childKeyPair.Public), msg, sig)
+	require.True(t, valid)
+}
