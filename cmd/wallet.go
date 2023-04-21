@@ -4,6 +4,7 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -34,10 +35,12 @@ to quickly create a Cobra application.`,
 // createCmd represents the create command
 var createCmd = &cobra.Command{
 	Use:   "create [numaccounts]",
-	Short: "Generate a new wallet file",
-	Long:  `Create a new wallet file containing one or more randomly-generated accounts.`,
-	Args:  cobra.MaximumNArgs(1),
+	Short: "Generate a new wallet file from a BIP-39-compatible mnemonic",
+	Long: `Create a new wallet file containing one or more accounts using a BIP-39-compatible mnemonic.
+You can choose to use an existing mnemonic or generate a new, random mnemonic.`,
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
+		// get the number of accounts to create
 		n := 1
 		if len(args) > 0 {
 			tmpN, err := strconv.ParseInt(args[0], 10, 16)
@@ -45,8 +48,23 @@ var createCmd = &cobra.Command{
 			n = int(tmpN)
 		}
 
-		w, err := wallet.NewMultiWallet(n)
-		cobra.CheckErr(err)
+		// get or generate the mnemonic
+		fmt.Print("Enter a BIP-39-compatible mnemonic (or leave blank to generate a new one): ")
+		reader := bufio.NewReader(os.Stdin)
+		text, _ := reader.ReadString('\n')
+		var w *wallet.Wallet
+		var err error
+		// TODO: check if we see \r\n on windows
+		if text == "\n" {
+			w, err = wallet.NewMultiWalletRandomMnemonic(n)
+			cobra.CheckErr(err)
+			fmt.Println("SAVE THIS MNEMONIC IN A SAFE PLACE!")
+			fmt.Println(w.Mnemonic())
+		} else {
+			// try to use as a mnemonic
+			w, err = wallet.NewMultiWalletFromMnemonic(text, n)
+			cobra.CheckErr(err)
+		}
 
 		fmt.Print("Enter a secure password (optional but strongly recommended): ")
 		password, err := password.Read(os.Stdin)

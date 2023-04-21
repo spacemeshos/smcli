@@ -23,9 +23,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		wallet.WithPbkdf2Password(password),
 	)
 
-	//entropy, _ := bip39.NewEntropy(256)
-	//mnemonic, _ := bip39.NewMnemonic(entropy)
-	w, err := wallet.NewWallet()
+	w, err := wallet.NewMultiWalletRandomMnemonic(1)
 	require.NoError(t, err)
 
 	file, err := os.CreateTemp("./", "test_wallet.*.json")
@@ -42,6 +40,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 	w2, err := wKey.Open(file)
 	require.NoError(t, err)
 	require.Equal(t, w.Secrets.Accounts, w2.Secrets.Accounts)
+	require.Equal(t, w.Secrets.Mnemonic, w2.Secrets.Mnemonic)
 
 	// trying to open with a different wallet key, same pw and nonce, should work
 	wKey = wallet.NewKey(
@@ -52,6 +51,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 	w2, err = wKey.Open(file)
 	require.NoError(t, err)
 	require.Equal(t, w.Secrets.Accounts, w2.Secrets.Accounts)
+	require.Equal(t, w.Secrets.Mnemonic, w2.Secrets.Mnemonic)
 
 	// trying to open the same file with a different key or nonce should fail
 	password2 := password[:]

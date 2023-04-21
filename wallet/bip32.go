@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/spacemeshos/smcli/common"
-	"github.com/spacemeshos/smkeys/bip32"
+	smbip32 "github.com/spacemeshos/smkeys/bip32"
 )
 
 // Function names inspired by https://github.com/tyler-smith/go-bip32/blob/master/bip32.go
@@ -50,16 +50,13 @@ type EDKeyPair struct {
 	Path        string     `json:"path"`
 	Public      PublicKey  `json:"publicKey"`
 	Private     PrivateKey `json:"secretKey"`
-	Salt        []byte     `json:"salt"`
 }
 
 func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
-	if len(seed) != bip32.SeedSize {
+	if len(seed) != ed25519.SeedSize {
 		return nil, ErrInvalidSeed
 	}
-	//salt := []byte(common.DefaultEncryptionSalt)
-	// TODO: is salt needed here?
-	key, err := bip32.FromSeed(seed)
+	key, err := smbip32.FromSeed(seed)
 	if err != nil {
 		return nil, err
 	}
@@ -74,11 +71,10 @@ func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
 	}, nil
 }
 
-func (kp *EDKeyPair) NewChildKeyPair(childIdx uint32) (*EDKeyPair, error) {
-	// TODO: underlying fn does not support salt, do we need it?
-	key, err := bip32.DeriveChild(
+func (kp *EDKeyPair) NewChildKeyPair(childIdx int) (*EDKeyPair, error) {
+	key, err := smbip32.DeriveChild(
 		ed25519.PrivateKey(kp.Private).Seed(),
-		childIdx,
+		uint32(childIdx),
 	)
 	if err != nil {
 		return nil, err
