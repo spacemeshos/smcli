@@ -82,7 +82,7 @@ func (kp *EDKeyPair) NewChildKeyPair(childIdx int) (*EDKeyPair, error) {
 	return &EDKeyPair{
 		Private: key[:],
 		Public:  PublicKey(ed25519.PrivateKey(key[:]).Public().(ed25519.PublicKey)),
+		// TODO: set path correctly. requires re-adding BIP32 path support.
 		//Path:    append(kp.Path, childIdx),
-		//Salt:    kp.Salt,
 	}, nil
 }

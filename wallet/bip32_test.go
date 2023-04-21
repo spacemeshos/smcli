@@ -1,20 +1,19 @@
-package wallet_test
+package wallet
 
 import (
 	"crypto/ed25519"
 	"crypto/sha512"
 	"testing"
 
-	"github.com/spacemeshos/smcli/wallet"
 	"github.com/stretchr/testify/require"
 	"github.com/xdg-go/pbkdf2"
 )
 
-func generateTestMasterKeyPair() (*wallet.EDKeyPair, error) {
+func generateTestMasterKeyPair() (*EDKeyPair, error) {
 	mnemonic := "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 	password := "Winning together!"
 	seed := pbkdf2.Key([]byte(mnemonic), []byte("mnemonic"+password), 2048, 32, sha512.New)
-	return wallet.NewMasterKeyPair(seed)
+	return NewMasterKeyPair(seed)
 }
 
 func TestNewMasterBIP32EDKeyPair(t *testing.T) {
