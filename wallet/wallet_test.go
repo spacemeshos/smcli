@@ -12,10 +12,24 @@ import (
 
 const Bip44Prefix = "m/44'/540'"
 
-func TestNewWallet(t *testing.T) {
-	w, err := NewMultiWalletRandomMnemonic(1)
+func TestRandomAndMnemonic(t *testing.T) {
+	n := 3
+
+	// generate a wallet with a random mnemonic
+	w1, err := NewMultiWalletRandomMnemonic(n)
 	require.NoError(t, err)
-	require.NotNil(t, w)
+	require.Len(t, w1.Secrets.Accounts, n)
+
+	// now use that mnemonic to generate a new wallet
+	w2, err := NewMultiWalletFromMnemonic(w1.Mnemonic(), n)
+	require.NoError(t, err)
+	require.Len(t, w2.Secrets.Accounts, n)
+
+	// make sure all the keys match
+	for i := 0; i < n; i++ {
+		require.Equal(t, w1.Secrets.Accounts[i].Private, w2.Secrets.Accounts[i].Private)
+		require.Equal(t, w1.Secrets.Accounts[i].Public, w2.Secrets.Accounts[i].Public)
+	}
 }
 
 func TestAccountFromSeed(t *testing.T) {

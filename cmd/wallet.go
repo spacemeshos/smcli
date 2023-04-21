@@ -15,6 +15,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // walletCmd represents the wallet command
@@ -51,11 +52,16 @@ You can choose to use an existing mnemonic or generate a new, random mnemonic.`,
 		// get or generate the mnemonic
 		fmt.Print("Enter a BIP-39-compatible mnemonic (or leave blank to generate a new one): ")
 		reader := bufio.NewReader(os.Stdin)
-		text, _ := reader.ReadString('\n')
-		var w *wallet.Wallet
 		var err error
+		text, err := reader.ReadString('\n')
+		cobra.CheckErr(err)
+
+		// It's critical that we trim whitespace, including CRLF. Otherwise it will get included in the mnemonic.
+		text = strings.TrimSpace(text)
+
+		var w *wallet.Wallet
 		// TODO: check if we see \r\n on windows
-		if text == "\n" {
+		if text == "" {
 			w, err = wallet.NewMultiWalletRandomMnemonic(n)
 			cobra.CheckErr(err)
 			fmt.Println("SAVE THIS MNEMONIC IN A SAFE PLACE!")
