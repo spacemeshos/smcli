@@ -156,7 +156,7 @@ func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, 
 	return
 }
 
-func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
+func (k *WalletKey) Open(file *os.File, debugMode bool) (w *Wallet, err error) {
 	ew := &EncryptedWalletFile{}
 	if err = json.NewDecoder(file).Decode(ew); err != nil {
 		return
@@ -186,7 +186,9 @@ func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
 	if err != nil {
 		return
 	}
-	log.Println("Decrypted JSON data:", string(plaintext))
+	if debugMode {
+		log.Println("Decrypted JSON data:", string(plaintext))
+	}
 	secrets := &walletSecrets{}
 	if err = json.Unmarshal(plaintext, secrets); err != nil {
 		return

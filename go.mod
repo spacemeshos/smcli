@@ -9,7 +9,13 @@ require (
 
 replace github.com/spacemeshos/smkeys => ../smkeys
 
-require github.com/rogpeppe/go-internal v1.9.0 // indirect
+require (
+	github.com/btcsuite/btcutil v1.0.2 // indirect
+	github.com/jedib0t/go-pretty/v6 v6.4.6 // indirect
+	github.com/mattn/go-runewidth v0.0.13 // indirect
+	github.com/rivo/uniseg v0.2.0 // indirect
+	github.com/rogpeppe/go-internal v1.9.0 // indirect
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect

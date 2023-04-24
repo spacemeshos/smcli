@@ -5,10 +5,12 @@ package cmd
 
 import (
 	"bufio"
-	"encoding/json"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/hashicorp/go-secure-stdlib/password"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spacemeshos/smcli/common"
 	"github.com/spacemeshos/smcli/wallet"
 	"github.com/spf13/cobra"
@@ -17,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 )
+
+var PrintPrivate bool
 
 // walletCmd represents the wallet command
 var walletCmd = &cobra.Command{
@@ -104,11 +108,12 @@ You can choose to use an existing mnemonic or generate a new, random mnemonic.`,
 
 // readCmd reads an existing wallet file
 var readCmd = &cobra.Command{
-	Use:   "read [wallet file]",
+	Use:   "read [wallet file] [--private]",
 	Short: "Reads an existing wallet file",
 	Long: `This command can be used to verify whether an existing wallet file can be
 successfully read and decrypted, whether the password to open the file is correct, etc.
-It prints the accounts from the wallet file.`,
+It prints the accounts from the wallet file. By default it does not print private keys.
+Add --private to print private keys.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		walletFn := args[0]
@@ -124,18 +129,62 @@ It prints the accounts from the wallet file.`,
 		fmt.Println()
 		cobra.CheckErr(err)
 
+		// check debug mode
+		debugMode := false
+		if debug := cmd.Flags().Lookup("debug"); debug != nil {
+			debugMode = debug.Value.String() == "true"
+		}
+
 		// attempt to read it
 		wk := wallet.NewKey(wallet.WithPasswordOnly([]byte(password)))
-		w, err := wk.Open(f)
+		w, err := wk.Open(f, debugMode)
 		cobra.CheckErr(err)
 
-		//fmt.Println("Mnemonic:", w.Mnemonic())
-		fmt.Println("Accounts:")
-		for _, a := range w.Secrets.Accounts {
-			err := json.NewEncoder(os.Stdout).Encode(a)
-			cobra.CheckErr(err)
-			fmt.Println()
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		// TODO: add spacemesh address format (bech32)
+		if PrintPrivate {
+			t.AppendHeader(table.Row{
+				"pub (hex)",
+				"priv (hex)",
+				"pub (b58)",
+				"priv (b58)",
+				"path",
+				"name",
+				"created",
+			})
+		} else {
+			t.AppendHeader(table.Row{
+				"pub (hex)",
+				"pub (b58)",
+				"path",
+				"name",
+				"created",
+			})
 		}
+		t.SetCaption("Mnemonic: %s", w.Mnemonic())
+		for _, a := range w.Secrets.Accounts {
+			if PrintPrivate {
+				t.AppendRow(table.Row{
+					hex.EncodeToString(a.Public),
+					hex.EncodeToString(a.Private),
+					base58.Encode(a.Public),
+					base58.Encode(a.Private),
+					a.Path,
+					a.DisplayName,
+					a.Created,
+				})
+			} else {
+				t.AppendRow(table.Row{
+					hex.EncodeToString(a.Public),
+					base58.Encode(a.Public),
+					a.Path,
+					a.DisplayName,
+					a.Created,
+				})
+			}
+		}
+		t.Render()
 	},
 }
 
@@ -143,14 +192,5 @@ func init() {
 	rootCmd.AddCommand(walletCmd)
 	walletCmd.AddCommand(createCmd)
 	walletCmd.AddCommand(readCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// walletCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// walletCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	readCmd.Flags().BoolVarP(&PrintPrivate, "private", "p", false, "Print private keys")
 }

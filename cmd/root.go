@@ -13,6 +13,7 @@ import (
 )
 
 var cfgFile string
+var debug bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -45,6 +46,7 @@ func init() {
 	// will be common for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.smcli.yaml)")
+	rootCmd.PersistentFlags().BoolP("debug", "d", false, "enable debug mode")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.

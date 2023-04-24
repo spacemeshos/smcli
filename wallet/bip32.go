@@ -47,7 +47,7 @@ func (k *PrivateKey) UnmarshalJSON(data []byte) (err error) {
 type EDKeyPair struct {
 	DisplayName string     `json:"displayName"`
 	Created     string     `json:"created"`
-	Path        string     `json:"path"`
+	Path        HDPath     `json:"path"`
 	Public      PublicKey  `json:"publicKey"`
 	Private     PrivateKey `json:"secretKey"`
 }
@@ -67,6 +67,7 @@ func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
 		Created:     common.NowTimeString(),
 		Private:     privKey,
 		Public:      PublicKey(ed25519.PrivateKey(privKey).Public().(ed25519.PublicKey)),
+		Path:        DefaultPath(),
 		//Salt:        salt,
 	}, nil
 }
@@ -82,7 +83,6 @@ func (kp *EDKeyPair) NewChildKeyPair(childIdx int) (*EDKeyPair, error) {
 	return &EDKeyPair{
 		Private: key[:],
 		Public:  PublicKey(ed25519.PrivateKey(key[:]).Public().(ed25519.PublicKey)),
-		// TODO: set path correctly. requires re-adding BIP32 path support.
-		//Path:    append(kp.Path, childIdx),
+		Path:    kp.Path.Extend(BIP32HardenedKeyStart | uint32(childIdx)),
 	}, nil
 }
