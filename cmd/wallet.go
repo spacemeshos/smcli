@@ -4,7 +4,6 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"bufio"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -55,9 +54,8 @@ You can choose to use an existing mnemonic or generate a new, random mnemonic.`,
 
 		// get or generate the mnemonic
 		fmt.Print("Enter a BIP-39-compatible mnemonic (or leave blank to generate a new one): ")
-		reader := bufio.NewReader(os.Stdin)
-		var err error
-		text, err := reader.ReadString('\n')
+		text, err := password.Read(os.Stdin)
+		fmt.Println()
 		cobra.CheckErr(err)
 
 		// It's critical that we trim whitespace, including CRLF. Otherwise it will get included in the mnemonic.
@@ -140,6 +138,13 @@ Add --private to print private keys.`,
 		w, err := wk.Open(f, debugMode)
 		cobra.CheckErr(err)
 
+		widthEnforcer := func(col string, maxLen int) string {
+			if len(col) <= maxLen {
+				return col
+			}
+			return fmt.Sprintf("%s..%s", col[:maxLen-7], col[len(col)-5:])
+		}
+
 		t := table.NewWriter()
 		t.SetOutputMirror(os.Stdout)
 		// TODO: add spacemesh address format (bech32)
@@ -153,6 +158,10 @@ Add --private to print private keys.`,
 				"name",
 				"created",
 			})
+			t.SetColumnConfigs([]table.ColumnConfig{
+				{Number: 1, WidthMax: 20, WidthMaxEnforcer: widthEnforcer},
+				{Number: 2, WidthMax: 20, WidthMaxEnforcer: widthEnforcer},
+			})
 		} else {
 			t.AppendHeader(table.Row{
 				"pub (hex)",
@@ -161,7 +170,35 @@ Add --private to print private keys.`,
 				"name",
 				"created",
 			})
+			t.SetColumnConfigs([]table.ColumnConfig{
+				{Number: 1, WidthMax: 20, WidthMaxEnforcer: widthEnforcer},
+			})
 		}
+
+		// print the master keypair
+		master := w.Secrets.MasterKeypair
+		if master != nil {
+			if PrintPrivate {
+				t.AppendRow(table.Row{
+					hex.EncodeToString(master.Public),
+					hex.EncodeToString(master.Private),
+					base58.Encode(master.Public),
+					base58.Encode(master.Private),
+					master.Path,
+					master.DisplayName,
+					master.Created,
+				})
+			} else {
+				t.AppendRow(table.Row{
+					hex.EncodeToString(master.Public),
+					base58.Encode(master.Public),
+					master.Path,
+					master.DisplayName,
+					master.Created,
+				})
+			}
+		}
+
 		t.SetCaption("Mnemonic: %s", w.Mnemonic())
 		for _, a := range w.Secrets.Accounts {
 			if PrintPrivate {

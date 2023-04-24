@@ -16,9 +16,6 @@ type Wallet struct {
 	//unlocked bool
 	Meta    walletMetadata `json:"meta"`
 	Secrets walletSecrets  `json:"crypto"`
-
-	// this is not persisted
-	//masterKeypair *EDKeyPair
 }
 
 // EncryptedWalletFile is the encrypted representation of the wallet on the filesystem
@@ -69,8 +66,9 @@ type walletSecretsEncrypted struct {
 }
 
 type walletSecrets struct {
-	Mnemonic string       `json:"mnemonic"`
-	Accounts []*EDKeyPair `json:"accounts"`
+	Mnemonic      string `json:"mnemonic"`
+	MasterKeypair *EDKeyPair
+	Accounts      []*EDKeyPair `json:"accounts"`
 }
 
 func NewMultiWalletRandomMnemonic(n int) (*Wallet, error) {
@@ -97,40 +95,38 @@ func NewMultiWalletFromMnemonic(m string, n int) (*Wallet, error) {
 	// TODO: add option for user to provide passphrase
 	// https://github.com/spacemeshos/smcli/issues/18
 	seed := bip39.NewSeed(m, "")
-	accounts, err := accountsFromSeed(seed, n)
+	masterKeyPair, err := NewMasterKeyPair(seed[:ed25519.SeedSize])
 	if err != nil {
 		return nil, err
 	}
-	return walletFromMnemonicAndAccounts(m, accounts)
+	accounts, err := accountsFromMaster(masterKeyPair, n)
+	if err != nil {
+		return nil, err
+	}
+	return walletFromMnemonicAndAccounts(m, masterKeyPair, accounts)
 }
 
-func walletFromMnemonicAndAccounts(m string, kp []*EDKeyPair) (*Wallet, error) {
-	displayName := "Main Wallet"
-	createTime := common.NowTimeString()
-
+func walletFromMnemonicAndAccounts(m string, masterKp *EDKeyPair, kp []*EDKeyPair) (*Wallet, error) {
 	w := &Wallet{
 		Meta: walletMetadata{
-			DisplayName: displayName,
-			Created:     createTime,
+			DisplayName: "Main Wallet",
+			Created:     common.NowTimeString(),
 			// TODO: set correctly
 			GenesisID: "",
 		},
 		Secrets: walletSecrets{
-			Mnemonic: m,
-			Accounts: kp,
+			Mnemonic:      m,
+			MasterKeypair: masterKp,
+			Accounts:      kp,
 		},
 	}
 	return w, nil
 }
 
-// accountsFromSeed generates one or more accounts from a given seed. Accounts use sequential HD paths.
-func accountsFromSeed(seed []byte, n int) (accounts []*EDKeyPair, err error) {
-	masterKeyPair, err := NewMasterKeyPair(seed[:ed25519.SeedSize])
-	if err != nil {
-		return
-	}
+// accountsFromMaster generates one or more accounts from a master keypair. Accounts use sequential HD paths.
+func accountsFromMaster(masterKeypair *EDKeyPair, n int) (accounts []*EDKeyPair, err error) {
 	for i := 0; i < n; i++ {
-		acct, err := masterKeyPair.NewChildKeyPair(i)
+		acct, err := masterKeypair.NewChildKeyPair(i)
 		if err != nil {
 			return nil, err
 		}

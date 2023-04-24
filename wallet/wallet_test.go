@@ -34,7 +34,7 @@ func TestRandomAndMnemonic(t *testing.T) {
 
 func TestAccountFromSeed(t *testing.T) {
 	seed := []byte("spacemesh is the best blockchain")
-	accts, err := accountsFromSeed(seed, 1)
+	accts, err := accountsFromMaster(seed, 1)
 	require.NoError(t, err)
 	require.Len(t, accts, 1)
 	keypair := accts[0]
@@ -55,7 +55,7 @@ func TestAccountFromSeed(t *testing.T) {
 	require.True(t, ed25519.Verify(ed25519.PublicKey(keypair.Public), msg, sig))
 
 	// create another account from the same seed
-	accts2, err := accountsFromSeed(seed, 1)
+	accts2, err := accountsFromMaster(seed, 1)
 	require.NoError(t, err)
 	require.Len(t, accts2, 1)
 	require.Equal(t, keypair.Public, accts2[0].Public)

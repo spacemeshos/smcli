@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/spacemeshos/smcli/common"
 	smbip32 "github.com/spacemeshos/smkeys/bip32"
 )
@@ -63,7 +64,7 @@ func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
 	privKey := PrivateKey(key[:])
 
 	return &EDKeyPair{
-		DisplayName: "Main Wallet",
+		DisplayName: "Master Key",
 		Created:     common.NowTimeString(),
 		Private:     privKey,
 		Public:      PublicKey(ed25519.PrivateKey(privKey).Public().(ed25519.PublicKey)),
@@ -81,8 +82,10 @@ func (kp *EDKeyPair) NewChildKeyPair(childIdx int) (*EDKeyPair, error) {
 		return nil, err
 	}
 	return &EDKeyPair{
-		Private: key[:],
-		Public:  PublicKey(ed25519.PrivateKey(key[:]).Public().(ed25519.PublicKey)),
-		Path:    kp.Path.Extend(BIP32HardenedKeyStart | uint32(childIdx)),
+		DisplayName: fmt.Sprintf("Child Key %d", childIdx),
+		Created:     common.NowTimeString(),
+		Private:     key[:],
+		Public:      PublicKey(ed25519.PrivateKey(key[:]).Public().(ed25519.PublicKey)),
+		Path:        kp.Path.Extend(BIP32HardenedKeyStart | uint32(childIdx)),
 	}, nil
 }
