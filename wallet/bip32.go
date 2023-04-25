@@ -4,7 +4,6 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/spacemeshos/smcli/common"
 	smbip32 "github.com/spacemeshos/smkeys/bip32"
@@ -12,8 +11,6 @@ import (
 
 // Function names inspired by https://github.com/tyler-smith/go-bip32/blob/master/bip32.go
 // We assume all keys are hardened.
-
-var ErrInvalidSeed = errors.New("invalid seed length")
 
 type PublicKey ed25519.PublicKey
 
@@ -54,10 +51,8 @@ type EDKeyPair struct {
 }
 
 func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
-	if len(seed) != ed25519.SeedSize {
-		return nil, ErrInvalidSeed
-	}
-	key, err := smbip32.FromSeed(seed)
+	path := DefaultPath()
+	key, err := smbip32.Derive(HDPathToString(path), seed)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +62,7 @@ func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
 		Created:     common.NowTimeString(),
 		Private:     key[:],
 		Public:      PublicKey(ed25519.PrivateKey(key[:]).Public().(ed25519.PublicKey)),
-		Path:        DefaultPath(),
+		Path:        path,
 	}, nil
 }
 

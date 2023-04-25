@@ -95,7 +95,7 @@ func NewMultiWalletFromMnemonic(m string, n int) (*Wallet, error) {
 	// TODO: add option for user to provide passphrase
 	// https://github.com/spacemeshos/smcli/issues/18
 	seed := bip39.NewSeed(m, "")
-	masterKeyPair, err := NewMasterKeyPair(seed[:ed25519.SeedSize])
+	masterKeyPair, err := NewMasterKeyPair(seed)
 	if err != nil {
 		return nil, err
 	}
