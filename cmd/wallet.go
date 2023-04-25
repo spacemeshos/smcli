@@ -153,6 +153,9 @@ keys in base58 format rather than hexidecimal.`,
 			if len(col) <= maxLen {
 				return col
 			}
+			if maxLen <= 7 {
+				return col[:maxLen]
+			}
 			return fmt.Sprintf("%s..%s", col[:maxLen-7], col[len(col)-5:])
 		}
 
