@@ -99,7 +99,7 @@ func NewMultiWalletFromMnemonic(m string, n int) (*Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
-	accounts, err := accountsFromMaster(masterKeyPair, n)
+	accounts, err := accountsFromMaster(masterKeyPair, seed, n)
 	if err != nil {
 		return nil, err
 	}
@@ -123,10 +123,11 @@ func walletFromMnemonicAndAccounts(m string, masterKp *EDKeyPair, kp []*EDKeyPai
 	return w, nil
 }
 
-// accountsFromMaster generates one or more accounts from a master keypair. Accounts use sequential HD paths.
-func accountsFromMaster(masterKeypair *EDKeyPair, n int) (accounts []*EDKeyPair, err error) {
+// accountsFromMaster generates one or more accounts from a master keypair and seed. Accounts use sequential HD paths.
+// The master keypair does not contain the seed that was used to generate it, so it needs to be passed in explicitly.
+func accountsFromMaster(masterKeypair *EDKeyPair, masterSeed []byte, n int) (accounts []*EDKeyPair, err error) {
 	for i := 0; i < n; i++ {
-		acct, err := masterKeypair.NewChildKeyPair(i)
+		acct, err := masterKeypair.NewChildKeyPair(masterSeed, i)
 		if err != nil {
 			return nil, err
 		}

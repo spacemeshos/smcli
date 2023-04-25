@@ -36,7 +36,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 	require.NoError(t, err)
 
 	file.Seek(0, io.SeekStart)
-	w2, err := wKey.Open(file)
+	w2, err := wKey.Open(file, false)
 	require.NoError(t, err)
 	require.Equal(t, w.Secrets.Accounts, w2.Secrets.Accounts)
 	require.Equal(t, w.Secrets.Mnemonic, w2.Secrets.Mnemonic)
@@ -47,7 +47,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		WithPbkdf2Password(password),
 	)
 	file.Seek(0, io.SeekStart)
-	w2, err = wKey.Open(file)
+	w2, err = wKey.Open(file, false)
 	require.NoError(t, err)
 	require.Equal(t, w.Secrets.Accounts, w2.Secrets.Accounts)
 	require.Equal(t, w.Secrets.Mnemonic, w2.Secrets.Mnemonic)
@@ -62,7 +62,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		WithPbkdf2Password(password2),
 	)
 	file.Seek(0, io.SeekStart)
-	_, err = wKey.Open(file)
+	_, err = wKey.Open(file, false)
 	require.Error(t, err)
 
 	// right password, wrong salt
@@ -73,7 +73,7 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		WithPbkdf2Password(password),
 	)
 	file.Seek(0, io.SeekStart)
-	_, err = wKey.Open(file)
+	_, err = wKey.Open(file, false)
 	require.Error(t, err)
 
 	// both wrong
@@ -82,6 +82,6 @@ func TestStoreAndRetrieveWalletToFromFile(t *testing.T) {
 		WithPbkdf2Password(password2),
 	)
 	file.Seek(0, io.SeekStart)
-	_, err = wKey.Open(file)
+	_, err = wKey.Open(file, false)
 	require.Error(t, err)
 }

@@ -61,23 +61,19 @@ func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
 	if err != nil {
 		return nil, err
 	}
-	privKey := PrivateKey(key[:])
 
 	return &EDKeyPair{
 		DisplayName: "Master Key",
 		Created:     common.NowTimeString(),
-		Private:     privKey,
-		Public:      PublicKey(ed25519.PrivateKey(privKey).Public().(ed25519.PublicKey)),
+		Private:     key[:],
+		Public:      PublicKey(ed25519.PrivateKey(key[:]).Public().(ed25519.PublicKey)),
 		Path:        DefaultPath(),
-		//Salt:        salt,
 	}, nil
 }
 
-func (kp *EDKeyPair) NewChildKeyPair(childIdx int) (*EDKeyPair, error) {
-	key, err := smbip32.DeriveChild(
-		ed25519.PrivateKey(kp.Private).Seed(),
-		uint32(childIdx),
-	)
+func (kp *EDKeyPair) NewChildKeyPair(seed []byte, childIdx int) (*EDKeyPair, error) {
+	path := kp.Path.Extend(BIP44HardenedAccountIndex(uint32(childIdx)))
+	key, err := smbip32.Derive(HDPathToString(path), seed)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +82,6 @@ func (kp *EDKeyPair) NewChildKeyPair(childIdx int) (*EDKeyPair, error) {
 		Created:     common.NowTimeString(),
 		Private:     key[:],
 		Public:      PublicKey(ed25519.PrivateKey(key[:]).Public().(ed25519.PublicKey)),
-		Path:        kp.Path.Extend(BIP32HardenedKeyStart | uint32(childIdx)),
+		Path:        path,
 	}, nil
 }
