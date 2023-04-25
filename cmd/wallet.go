@@ -19,7 +19,16 @@ import (
 	"strings"
 )
 
-var PrintPrivate bool
+var (
+	// printPrivate indicates that private keys should be printed
+	printPrivate bool
+
+	// printFull indicates that full keys should be printed (not abbreviated)
+	printFull bool
+
+	// printBase58 indicates that keys should be printed in base58 format
+	printBase58 bool
+)
 
 // walletCmd represents the wallet command
 var walletCmd = &cobra.Command{
@@ -31,9 +40,6 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	// Run: func(cmd *cobra.Command, args []string) {
-	// 	fmt.Println("wallet called")
-	// },
 }
 
 // createCmd represents the create command
@@ -57,24 +63,28 @@ You can choose to use an existing mnemonic or generate a new, random mnemonic.`,
 		text, err := password.Read(os.Stdin)
 		fmt.Println()
 		cobra.CheckErr(err)
+		fmt.Println("Note: This application does not yet support BIP-39-compatible optional passwords. Support will be added soon.")
 
 		// It's critical that we trim whitespace, including CRLF. Otherwise it will get included in the mnemonic.
 		text = strings.TrimSpace(text)
 
 		var w *wallet.Wallet
-		// TODO: check if we see \r\n on windows
 		if text == "" {
 			w, err = wallet.NewMultiWalletRandomMnemonic(n)
 			cobra.CheckErr(err)
-			fmt.Println("SAVE THIS MNEMONIC IN A SAFE PLACE!")
+			fmt.Println("\nThis is your mnemonic (seed phrase). Write it down and store it safely. It is the ONLY way to restore your wallet.")
+			fmt.Println("Neither Spacemesh nor anyone else can help you restore your wallet without this mnemonic.")
+			fmt.Println("\n***********************************\nSAVE THIS MNEMONIC IN A SAFE PLACE!\n***********************************\n")
 			fmt.Println(w.Mnemonic())
+			fmt.Println("\nPress enter when you have securely saved your mnemonic.")
+			_, _ = fmt.Scanln()
 		} else {
 			// try to use as a mnemonic
 			w, err = wallet.NewMultiWalletFromMnemonic(text, n)
 			cobra.CheckErr(err)
 		}
 
-		fmt.Print("Enter a secure password (optional but strongly recommended): ")
+		fmt.Print("Enter a secure password used to encrypt the wallet file (optional but strongly recommended): ")
 		password, err := password.Read(os.Stdin)
 		fmt.Println()
 		cobra.CheckErr(err)
@@ -106,12 +116,13 @@ You can choose to use an existing mnemonic or generate a new, random mnemonic.`,
 
 // readCmd reads an existing wallet file
 var readCmd = &cobra.Command{
-	Use:   "read [wallet file] [--private]",
+	Use:   "read [wallet file] [--full/-f] [--private/-p] [--base58]",
 	Short: "Reads an existing wallet file",
 	Long: `This command can be used to verify whether an existing wallet file can be
 successfully read and decrypted, whether the password to open the file is correct, etc.
 It prints the accounts from the wallet file. By default it does not print private keys.
-Add --private to print private keys.`,
+Add --private to print private keys. Add --full to print full keys. Add --base58 to print
+keys in base58 format rather than hexidecimal.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		walletFn := args[0]
@@ -147,51 +158,65 @@ Add --private to print private keys.`,
 
 		t := table.NewWriter()
 		t.SetOutputMirror(os.Stdout)
+		t.SetTitle("Wallet Contents")
+		caption := ""
+		if printPrivate {
+			caption = fmt.Sprintf("Mnemonic: %s", w.Mnemonic())
+		}
+		if !printFull {
+			if printPrivate {
+				caption += "\n"
+			}
+			caption += "To print full keys, use the --full flag."
+		}
+		t.SetCaption(caption)
+		maxWidth := 20
+		if printFull {
+			maxWidth = 99
+		}
 		// TODO: add spacemesh address format (bech32)
-		if PrintPrivate {
+		if printPrivate {
 			t.AppendHeader(table.Row{
-				"pub (hex)",
-				"priv (hex)",
-				"pub (b58)",
-				"priv (b58)",
+				"pubkey",
+				"privkey",
 				"path",
 				"name",
 				"created",
 			})
 			t.SetColumnConfigs([]table.ColumnConfig{
-				{Number: 1, WidthMax: 20, WidthMaxEnforcer: widthEnforcer},
-				{Number: 2, WidthMax: 20, WidthMaxEnforcer: widthEnforcer},
+				{Number: 1, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer},
+				{Number: 2, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer},
 			})
 		} else {
 			t.AppendHeader(table.Row{
-				"pub (hex)",
-				"pub (b58)",
+				"pubkey",
 				"path",
 				"name",
 				"created",
 			})
 			t.SetColumnConfigs([]table.ColumnConfig{
-				{Number: 1, WidthMax: 20, WidthMaxEnforcer: widthEnforcer},
+				{Number: 1, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer},
 			})
 		}
 
 		// print the master keypair
 		master := w.Secrets.MasterKeypair
+		encoder := hex.EncodeToString
+		if printBase58 {
+			encoder = base58.Encode
+		}
 		if master != nil {
-			if PrintPrivate {
+			if printPrivate {
 				t.AppendRow(table.Row{
-					hex.EncodeToString(master.Public),
-					hex.EncodeToString(master.Private),
-					base58.Encode(master.Public),
-					base58.Encode(master.Private),
+					encoder(master.Public),
+					encoder(master.Private),
 					master.Path,
 					master.DisplayName,
 					master.Created,
 				})
 			} else {
 				t.AppendRow(table.Row{
-					hex.EncodeToString(master.Public),
-					base58.Encode(master.Public),
+					encoder(master.Public),
 					master.Path,
 					master.DisplayName,
 					master.Created,
@@ -199,22 +224,18 @@ Add --private to print private keys.`,
 			}
 		}
 
-		t.SetCaption("Mnemonic: %s", w.Mnemonic())
 		for _, a := range w.Secrets.Accounts {
-			if PrintPrivate {
+			if printPrivate {
 				t.AppendRow(table.Row{
-					hex.EncodeToString(a.Public),
-					hex.EncodeToString(a.Private),
-					base58.Encode(a.Public),
-					base58.Encode(a.Private),
+					encoder(a.Public),
+					encoder(a.Private),
 					a.Path,
 					a.DisplayName,
 					a.Created,
 				})
 			} else {
 				t.AppendRow(table.Row{
-					hex.EncodeToString(a.Public),
-					base58.Encode(a.Public),
+					encoder(a.Public),
 					a.Path,
 					a.DisplayName,
 					a.Created,
@@ -229,5 +250,7 @@ func init() {
 	rootCmd.AddCommand(walletCmd)
 	walletCmd.AddCommand(createCmd)
 	walletCmd.AddCommand(readCmd)
-	readCmd.Flags().BoolVarP(&PrintPrivate, "private", "p", false, "Print private keys")
+	readCmd.Flags().BoolVarP(&printPrivate, "private", "p", false, "Print private keys")
+	readCmd.Flags().BoolVarP(&printFull, "full", "f", false, "Print full keys (no abbreviation)")
+	readCmd.Flags().BoolVar(&printBase58, "base58", false, "Print keys in base58 (rather than hex)")
 }
