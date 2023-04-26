@@ -34,18 +34,17 @@ func TestRandomAndMnemonic(t *testing.T) {
 }
 
 func TestAccountFromSeed(t *testing.T) {
-	seed := []byte("spacemesh is the best blockchain")
-	master, err := NewMasterKeyPair(seed)
+	master, err := NewMasterKeyPair(goodSeed)
 	require.NoError(t, err)
-	accts, err := accountsFromMaster(master, seed, 1)
+	accts, err := accountsFromMaster(master, goodSeed, 1)
 	require.NoError(t, err)
 	require.Len(t, accts, 1)
 	keypair := accts[0]
 
 	expPubKey :=
-		"a155daf690fbde8094988ba3fe56ce6023d4283e362c89446d5687e198060195"
+		"feae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd"
 	expPrivKey :=
-		"707342b04712408e14cb65c217cee914e26611a4c86c297b5dd4d94e9f6456c0a155daf690fbde8094988ba3fe56ce6023d4283e362c89446d5687e198060195"
+		"05fe9affa5562ca833faf3803ce5f6f7615d3c37c4a27903492027f6853e486dfeae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd"
 
 	actualPubKey := hex.EncodeToString(keypair.Public)
 	actualPrivKey := hex.EncodeToString(keypair.Private)
@@ -58,7 +57,7 @@ func TestAccountFromSeed(t *testing.T) {
 	require.True(t, ed25519.Verify(ed25519.PublicKey(keypair.Public), msg, sig))
 
 	// create another account from the same seed
-	accts2, err := accountsFromMaster(master, seed, 1)
+	accts2, err := accountsFromMaster(master, goodSeed, 1)
 	require.NoError(t, err)
 	require.Len(t, accts2, 1)
 	require.Equal(t, keypair.Public, accts2[0].Public)

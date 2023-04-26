@@ -11,10 +11,12 @@ import (
 	"github.com/xdg-go/pbkdf2"
 )
 
+var goodSeed = []byte("abandon abandon abandon abandon abandon abandon abandon abandon ")
+
 func generateTestMasterKeyPair() (*EDKeyPair, error) {
 	mnemonic := "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 	password := "Winning together!"
-	seed := pbkdf2.Key([]byte(mnemonic), []byte("mnemonic"+password), 2048, 32, sha512.New)
+	seed := pbkdf2.Key([]byte(mnemonic), []byte("mnemonic"+password), 2048, 64, sha512.New)
 	return NewMasterKeyPair(seed)
 }
 
@@ -65,23 +67,14 @@ func TestPath(t *testing.T) {
 	require.Equal(t, path1Hd, path2Hd)
 }
 
-// Test that the "output" seed of a keygen matches the input seed
-//func TestSeedMatch(t *testing.T) {
-//	seed := []byte("spacemesh is the best blockchain")
-//	masterKeyPair, err := NewMasterKeyPair(seed)
-//	require.NoError(t, err)
-//	require.Equal(t, hex.EncodeToString(seed), hex.EncodeToString(ed25519.PrivateKey(masterKeyPair.Private).Seed()))
-//}
-
 // Test deriving a child keypair
 func TestChildKeyPair(t *testing.T) {
-	seed := []byte("spacemesh is the best blockchain")
 	path := DefaultPath().Extend(BIP44HardenedAccountIndex(0))
 
 	// generate first keypair
-	masterKeyPair, err := NewMasterKeyPair(seed)
+	masterKeyPair, err := NewMasterKeyPair(goodSeed)
 	require.NoError(t, err)
-	childKeyPair1, err := masterKeyPair.NewChildKeyPair(seed, 0)
+	childKeyPair1, err := masterKeyPair.NewChildKeyPair(goodSeed, 0)
 	require.Equal(t, path, childKeyPair1.Path)
 	require.Equal(t, ed25519.PrivateKeySize, len(childKeyPair1.Private))
 	require.Equal(t, ed25519.PublicKeySize, len(childKeyPair1.Public))
@@ -95,7 +88,7 @@ func TestChildKeyPair(t *testing.T) {
 	require.True(t, valid)
 
 	// generate second keypair and check lengths
-	childKeyPair2, err := bip32.Derive(HDPathToString(path), seed)
+	childKeyPair2, err := bip32.Derive(HDPathToString(path), goodSeed)
 	require.NoError(t, err)
 	require.Equal(t, ed25519.PrivateKeySize, len(childKeyPair2))
 	privkey2 := PrivateKey(childKeyPair2[:])
@@ -106,8 +99,8 @@ func TestChildKeyPair(t *testing.T) {
 	require.Equal(t, ed25519.PublicKeySize, len(pubkey2))
 
 	// make sure they agree
-	require.Equal(t, "a155daf690fbde8094988ba3fe56ce6023d4283e362c89446d5687e198060195", hex.EncodeToString(pubkey2))
+	require.Equal(t, "feae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd", hex.EncodeToString(pubkey2))
 	require.Equal(t, hex.EncodeToString(childKeyPair1.Public), hex.EncodeToString(pubkey2))
-	require.Equal(t, "707342b04712408e14cb65c217cee914e26611a4c86c297b5dd4d94e9f6456c0a155daf690fbde8094988ba3fe56ce6023d4283e362c89446d5687e198060195", hex.EncodeToString(privkey2))
+	require.Equal(t, "05fe9affa5562ca833faf3803ce5f6f7615d3c37c4a27903492027f6853e486dfeae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd", hex.EncodeToString(privkey2))
 	require.Equal(t, hex.EncodeToString(childKeyPair1.Private), hex.EncodeToString(privkey2))
 }
