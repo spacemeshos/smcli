@@ -1,6 +1,7 @@
 package wallet
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 )
@@ -19,28 +20,41 @@ const (
 
 type HDPath []uint32
 
-func (p HDPath) String() string {
-	return HDPathToString(p)
+func (p *HDPath) MarshalJSON() ([]byte, error) {
+	return json.Marshal(p.String())
 }
 
-func (p HDPath) Purpose() uint32 {
-	return p[HDPurposeSegment]
-}
-func (p HDPath) CoinType() uint32 {
-	return p[HDCoinTypeSegment]
-}
-func (p HDPath) Account() uint32 {
-	return p[HDAccountSegment]
-}
-func (p HDPath) Chain() uint32 {
-	return p[HDChainSegment]
-}
-func (p HDPath) Index() uint32 {
-	return p[HDIndexSegment]
+func (p *HDPath) UnmarshalJSON(data []byte) (err error) {
+	var s string
+	if err = json.Unmarshal(data, &s); err != nil {
+		return
+	}
+	*p, err = StringToHDPath(s)
+	return
 }
 
-func (p HDPath) Extend(idx uint32) HDPath {
-	return append(p, idx)
+func (p *HDPath) String() string {
+	return HDPathToString(*p)
+}
+
+func (p *HDPath) Purpose() uint32 {
+	return (*p)[HDPurposeSegment]
+}
+func (p *HDPath) CoinType() uint32 {
+	return (*p)[HDCoinTypeSegment]
+}
+func (p *HDPath) Account() uint32 {
+	return (*p)[HDAccountSegment]
+}
+func (p *HDPath) Chain() uint32 {
+	return (*p)[HDChainSegment]
+}
+func (p *HDPath) Index() uint32 {
+	return (*p)[HDIndexSegment]
+}
+
+func (p *HDPath) Extend(idx uint32) HDPath {
+	return append(*p, idx)
 }
 
 // Root of the path is m/purpose' (m/44')

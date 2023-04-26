@@ -214,14 +214,14 @@ keys in base58 format rather than hexidecimal.`,
 				t.AppendRow(table.Row{
 					encoder(master.Public),
 					encoder(master.Private),
-					master.Path,
+					master.Path.String(),
 					master.DisplayName,
 					master.Created,
 				})
 			} else {
 				t.AppendRow(table.Row{
 					encoder(master.Public),
-					master.Path,
+					master.Path.String(),
 					master.DisplayName,
 					master.Created,
 				})
@@ -233,14 +233,14 @@ keys in base58 format rather than hexidecimal.`,
 				t.AppendRow(table.Row{
 					encoder(a.Public),
 					encoder(a.Private),
-					a.Path,
+					a.Path.String(),
 					a.DisplayName,
 					a.Created,
 				})
 			} else {
 				t.AppendRow(table.Row{
 					encoder(a.Public),
-					a.Path,
+					a.Path.String(),
 					a.DisplayName,
 					a.Created,
 				})
