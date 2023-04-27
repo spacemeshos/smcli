@@ -3,26 +3,27 @@
 DEPLOC := https://github.com/spacemeshos/ed25519_bip32/releases/download
 DEPTAG := 1.0.6
 DEPLIB := libed25519_bip32
-EXCLUDE_PATTERN := LICENSE
+EXCLUDE_PATTERN := "LICENSE" "*.so" "*.dylib"
 UNZIP_DEST := deps
-DOWNLOAD_DEST := $(DEPLIB).tar.gz
+DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIB).tar.gz
 
 ifeq ($(OS),Windows_NT)
 	# Windows settings
 	RM = del /Q /F
 	RMDIR = rmdir /S /Q
 	MKDIR = mkdir
-#	SEPARATOR = \\
 
     FN = $(DEPLIB)_windows-amd64.zip
-    DOWNLOAD_DEST = $(DEPLIB).zip
-    CMD = 7z x -y -o$(UNZIP_DEST) $(DOWNLOAD_DEST) -x!$(EXCLUDE_PATTERN)
+    DOWNLOAD_DEST = $(UNZIP_DEST)/$(DEPLIB).zip
+    EXTRACT = 7z x -y
+    EXCLUDES = -x!$(EXCLUDE_PATTERN)
 else
 	# Linux settings
 	RM = rm -f
 	RMDIR = rm -rf
 	MKDIR = mkdir -p
-#	SEPARATOR = /
+	EXCLUDES = $(addprefix --exclude=,$(EXCLUDE_PATTERN))
+	EXTRACT = tar --no-wildcards-match-slash --no-anchored --wildcards -xzf
 
     UNAME_S := $(shell uname -s)
     ifeq ($(UNAME_S),Linux)
@@ -39,14 +40,13 @@ else
     	PLATFORM = $(MACHINE)-arm64
     endif
 	FN = $(DEPLIB)_$(PLATFORM).tar.gz
-	CMD = tar -xzf --exclude=$(EXCLUDE_PATTERN) $(FN)
 endif
 
 $(UNZIP_DEST): $(DOWNLOAD_DEST)
-	$(MKDIR) $(UNZIP_DEST)
-	$(CMD)
+	cd $(UNZIP_DEST) && $(EXTRACT) ../$(DOWNLOAD_DEST) $(EXCLUDES)
 
 $(DOWNLOAD_DEST):
+	$(MKDIR) $(UNZIP_DEST)
 	curl -sSfL $(DEPLOC)/v$(DEPTAG)/$(FN) -o $(DOWNLOAD_DEST)
 
 # Download the platform-specific dynamic library we rely on
