@@ -1,8 +1,8 @@
 name: Build and Release
 
-on:
-  release:
-    types: [created]
+on: push
+#  release:
+#    types: [created]
 
 jobs:
   releases-matrix:
@@ -17,8 +17,16 @@ jobs:
           - goarch: arm64
             goos: windows
     steps:
-    - uses: actions/checkout@v3
-    - uses: wangyoucao577/go-release-action@v1
+    - name: checkout
+      uses: actions/checkout@v3
+    - name: install musl
+      if: matrix.goos == linux
+      uses: awalsh128/cache-apt-pkgs-action@v1
+      with:
+        packages: musl-tools # provides musl-gcc
+        version: 1.0
+    - name: build and release
+      uses: wangyoucao577/go-release-action@v1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: ${{ matrix.goos }}
@@ -27,3 +35,5 @@ jobs:
         build_command: make build
         asset_name: "smcli-${{ github.event.release.tag_name }}-${{ matrix.goos }}-${{ matrix.goarch }}"
         extra_files: LICENSE README.md
+        # temporary
+        release_tag: v1.0.1
