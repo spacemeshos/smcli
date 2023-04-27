@@ -57,7 +57,7 @@ $(DOWNLOAD_DEST):
 # Download the platform-specific dynamic library we rely on
 .PHONY: build
 build: $(UNZIP_DEST)
-	$(CPREFIX) CGO_ENABLED=1 go build -ldflags '-linkmode external -extldflags "-static -L$(UNZIP_DEST)"'
+	$(CPREFIX) CGO_ENABLED=1 go build -ldflags '-linkmode external -extldflags "-static -L$(UNZIP_DEST) -led25519_bip32"'
 
 clean:
 	$(RM) $(DOWNLOAD_DEST)
