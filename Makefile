@@ -3,6 +3,7 @@
 DEPLOC := https://github.com/spacemeshos/ed25519_bip32/releases/download
 DEPTAG := 1.0.6
 DEPLIB := libed25519_bip32
+# Exclude dylib files (we only need the static libs)
 EXCLUDE_PATTERN := "LICENSE" "*.so" "*.dylib"
 UNZIP_DEST := deps
 DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIB).tar.gz
@@ -24,6 +25,9 @@ else
 	MKDIR = mkdir -p
 	EXCLUDES = $(addprefix --exclude=,$(EXCLUDE_PATTERN))
 	EXTRACT = tar --no-wildcards-match-slash --no-anchored --wildcards -xzf
+
+	# Building on Linux requires musl toolchain
+	CPREFIX = CC=musl-gcc
 
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Linux)
@@ -52,7 +56,7 @@ $(DOWNLOAD_DEST):
 # Download the platform-specific dynamic library we rely on
 .PHONY: build
 build: $(UNZIP_DEST)
-	go build .
+	$(CPREFIX) CGO_ENABLED=1 go build -ldflags '-linkmode external -extldflags "-static -L$(UNZIP_DEST)"'
 
 clean:
 	$(RM) $(DOWNLOAD_DEST)
