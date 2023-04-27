@@ -19,19 +19,20 @@ ifeq ($(OS),Windows_NT)
 	EXTRACT = 7z x -y
 	EXCLUDES = -x!$(EXCLUDE_PATTERN)
 else
-	# Linux settings
+	# Linux and macOS settings
 	RM = rm -f
 	RMDIR = rm -rf
 	MKDIR = mkdir -p
 	EXCLUDES = $(addprefix --exclude=,$(EXCLUDE_PATTERN))
-	EXTRACT = tar --no-wildcards-match-slash --no-anchored --wildcards -xzf
-
-	# Building on Linux requires musl toolchain
-	CPREFIX = CC=musl-gcc
+	EXTRACT = tar -xzf
 
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Linux)
 		MACHINE = linux
+
+		# Linux specific settings
+		# Building on Linux requires musl toolchain
+		CPREFIX = CC=musl-gcc
 	endif
 	ifeq ($(UNAME_S),Darwin)
 		MACHINE = macos
