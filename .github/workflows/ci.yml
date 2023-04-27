@@ -22,7 +22,7 @@ jobs:
           go-version: ${{ env.go-version }}
 
       - name: build
-        run: go build -v ./...
+        run: make build
 
       - name: go test
-        run: go test -v ./...
+        run: make test
