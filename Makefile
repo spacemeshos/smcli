@@ -13,10 +13,10 @@ ifeq ($(OS),Windows_NT)
 	RMDIR = rmdir /S /Q
 	MKDIR = mkdir
 
-    FN = $(DEPLIB)_windows-amd64.zip
-    DOWNLOAD_DEST = $(UNZIP_DEST)/$(DEPLIB).zip
-    EXTRACT = 7z x -y
-    EXCLUDES = -x!$(EXCLUDE_PATTERN)
+	FN = $(DEPLIB)_windows-amd64.zip
+	DOWNLOAD_DEST = $(UNZIP_DEST)/$(DEPLIB).zip
+	EXTRACT = 7z x -y
+	EXCLUDES = -x!$(EXCLUDE_PATTERN)
 else
 	# Linux settings
 	RM = rm -f
@@ -25,20 +25,20 @@ else
 	EXCLUDES = $(addprefix --exclude=,$(EXCLUDE_PATTERN))
 	EXTRACT = tar --no-wildcards-match-slash --no-anchored --wildcards -xzf
 
-    UNAME_S := $(shell uname -s)
-    ifeq ($(UNAME_S),Linux)
-        MACHINE = linux
-    endif
-    ifeq ($(UNAME_S),Darwin)
-        MACHINE = macos
-    endif
-    UNAME_P := $(shell uname -p)
-    ifeq ($(UNAME_P),x86_64)
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S),Linux)
+		MACHINE = linux
+	endif
+	ifeq ($(UNAME_S),Darwin)
+		MACHINE = macos
+	endif
+	UNAME_P := $(shell uname -p)
+	ifeq ($(UNAME_P),x86_64)
 		PLATFORM = $(MACHINE)-amd64
-    endif
-    ifneq ($(filter arm%,$(UNAME_P)),)
-    	PLATFORM = $(MACHINE)-arm64
-    endif
+	endif
+	ifneq ($(filter arm%,$(UNAME_P)),)
+		PLATFORM = $(MACHINE)-arm64
+	endif
 	FN = $(DEPLIB)_$(PLATFORM).tar.gz
 endif
 
