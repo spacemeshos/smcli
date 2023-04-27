@@ -1,6 +1,6 @@
 name: Build and Release
 
-on: pull_request
+on: push
 #  release:
 #    types: [created]
 
