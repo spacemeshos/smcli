@@ -61,7 +61,8 @@ func TestPath(t *testing.T) {
 	path1Str := "m/44'/540'/0'/0'/0'"
 	path1Hd, err := StringToHDPath(path1Str)
 	require.NoError(t, err)
-	path2Hd := DefaultPath().Extend(BIP44HardenedAccountIndex(0))
+	path := DefaultPath()
+	path2Hd := path.Extend(BIP44HardenedAccountIndex(0))
 	path2Str := HDPathToString(path2Hd)
 	require.Equal(t, path1Str, path2Str)
 	require.Equal(t, path1Hd, path2Hd)
@@ -69,7 +70,8 @@ func TestPath(t *testing.T) {
 
 // Test deriving a child keypair
 func TestChildKeyPair(t *testing.T) {
-	path := DefaultPath().Extend(BIP44HardenedAccountIndex(0))
+	defaultPath := DefaultPath()
+	path := defaultPath.Extend(BIP44HardenedAccountIndex(0))
 
 	// generate first keypair
 	masterKeyPair, err := NewMasterKeyPair(goodSeed)

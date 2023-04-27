@@ -7,6 +7,7 @@ DEPLIB := lib$(DEPLIBNAME)
 # Exclude dylib files (we only need the static libs)
 EXCLUDE_PATTERN := "LICENSE" "*.so" "*.dylib"
 UNZIP_DEST := deps
+REAL_DEST := $(shell realpath $(UNZIP_DEST))
 DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIB).tar.gz
 EXTLDFLAGS := -L$(UNZIP_DEST) -l$(DEPLIBNAME)
 
@@ -64,6 +65,10 @@ $(DOWNLOAD_DEST):
 .PHONY: build
 build: $(UNZIP_DEST)
 	$(CPREFIX) CGO_ENABLED=1 go build -ldflags '$(LDFLAGS)'
+
+.PHONY: test
+test: $(UNZIP_DEST)
+	LD_LIBRARY_PATH=$(REAL_DEST) go test -v -ldflags "-extldflags \"-L$(REAL_DEST) -led25519_bip32\"" ./...
 
 clean:
 	$(RM) $(DOWNLOAD_DEST)
