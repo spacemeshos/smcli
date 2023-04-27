@@ -20,9 +20,12 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.go-version }}
-
+      - name: install musl
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: musl-tools # provides musl-gcc
+          version: 1.0
       - name: build
         run: make build
-
       - name: go test
         run: make test

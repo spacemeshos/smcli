@@ -23,6 +23,7 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
-        binary_name: sm
+        binary_name: smcli
+        build_command: make build
         asset_name: "smcli-${{ github.event.release.tag_name }}-${{ matrix.goos }}-${{ matrix.goarch }}"
         extra_files: LICENSE README.md
