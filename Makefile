@@ -1,12 +1,14 @@
 # Based on https://gist.github.com/trosendal/d4646812a43920bfe94e
 
-DEPLOC := https://github.com/spacemeshos/ed25519_bip32/releases/download
 DEPTAG := 1.0.6
-DEPLIB := libed25519_bip32
+DEPLIBNAME := ed25519_bip32
+DEPLOC := https://github.com/spacemeshos/$(DEPLIBNAME)/releases/download
+DEPLIB := lib$(DEPLIBNAME)
 # Exclude dylib files (we only need the static libs)
 EXCLUDE_PATTERN := "LICENSE" "*.so" "*.dylib"
 UNZIP_DEST := deps
 DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIB).tar.gz
+EXTLDFLAGS := -L$(UNZIP_DEST) -l$(DEPLIBNAME)
 
 ifeq ($(OS),Windows_NT)
 	# Windows settings
@@ -31,11 +33,15 @@ else
 		MACHINE = linux
 
 		# Linux specific settings
-		# Building on Linux requires musl toolchain
+		# We do a static build on Linux using musl toolchain
 		CPREFIX = CC=musl-gcc
+		LDFLAGS = -linkmode external -extldflags "-static $(EXTLDFLAGS)"
 	endif
 	ifeq ($(UNAME_S),Darwin)
 		MACHINE = macos
+
+		# macOS specific settings
+		LDFLAGS = -extldflags "$(EXTLDFLAGS)"
 	endif
 	UNAME_P := $(shell uname -p)
 	ifeq ($(UNAME_P),x86_64)
@@ -57,7 +63,7 @@ $(DOWNLOAD_DEST):
 # Download the platform-specific dynamic library we rely on
 .PHONY: build
 build: $(UNZIP_DEST)
-	$(CPREFIX) CGO_ENABLED=1 go build -ldflags '-linkmode external -extldflags "-static -L$(UNZIP_DEST) -led25519_bip32"'
+	$(CPREFIX) CGO_ENABLED=1 go build -ldflags '$(LDFLAGS)'
 
 clean:
 	$(RM) $(DOWNLOAD_DEST)
