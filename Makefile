@@ -29,6 +29,10 @@ else
 	EXCLUDES = $(addprefix --exclude=,$(EXCLUDE_PATTERN))
 	EXTRACT = tar -xzf
 
+	# set some defaults
+	MACHINE = unknown
+	PLATFORM = unknown
+
 	UNAME_S := $(shell uname -s)
 	ifeq ($(UNAME_S),Linux)
 		MACHINE = linux
