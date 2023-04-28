@@ -4,9 +4,6 @@ on: push
 #  release:
 #    types: [created]
 
-env:
-  BINARY_NAME: smcli
-
 jobs:
   release:
     strategy:
@@ -29,7 +26,8 @@ jobs:
             name: linux-arm64
             extension: tar.gz
     env:
-      ARTIFACT_NAME: ${{ env.BINARY_NAME }}-${{ github.event.release.tag_name }}-${{ matrix.name }}.${{ matrix.extension }}
+      BINARY_NAME: smcli
+      ARTIFACT_NAME: smcli-${{ github.event.release.tag_name }}-${{ matrix.name }}.${{ matrix.extension }}
     runs-on: ${{ matrix.image }}
     name: Release ${{ matrix.name }}
     steps:
