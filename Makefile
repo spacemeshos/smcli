@@ -80,10 +80,10 @@ else
 	endif
 	ifeq ($(ARCH),x86_64)
 		PLATFORM = $(MACHINE)-amd64
-	else ifneq ($(filter $(ARCH),arm,aarch64))
+	else ifneq ($(filter $(ARCH),arm aarch64),)
 		PLATFORM = $(MACHINE)-arm64
 	else
-  		$(error Unknown processor architecture: $(ARCH))
+		$(error Unknown processor architecture: $(ARCH))
 	endif
 	FN = $(DEPLIB)_$(PLATFORM).tar.gz
 endif
