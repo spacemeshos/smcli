@@ -11,37 +11,42 @@ REAL_DEST := $(shell realpath $(UNZIP_DEST))
 DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIB).tar.gz
 EXTLDFLAGS := -L$(UNZIP_DEST) -l$(DEPLIBNAME)
 
-# Default values
-ARCH := unknown
-SYSTEM := unknown
-
 # Detect operating system
 ifeq ($(OS),Windows_NT)
   SYSTEM := windows
 else
   UNAME_S := $(shell uname -s)
   ifeq ($(UNAME_S),Linux)
-    SYSTEM := linux
+	SYSTEM := linux
   else ifeq ($(UNAME_S),Darwin)
-    SYSTEM := mac
+	SYSTEM := darwin
   else
-    $(error Unknown operating system: $(UNAME_S))
+	$(error Unknown operating system: $(UNAME_S))
   endif
 endif
 
+# Default values. Can be overridden on command line, e.g., inside CLI for cross-compilation.
+# Note: this Makefile structure theoretically supports cross-compilation using GOOS and GOARCH.
+# In practice, however, depending on the host and target OS/architecture, you'll likely run into
+# errors in both the compiler and the linker when trying to compile cross-platform.
+GOOS ?= $(SYSTEM)
+GOARCH ?= unknown
+
 # Detect processor architecture
-UNAME_M := $(shell uname -m)
-ifeq ($(UNAME_M),x86_64)
-  ARCH := x86_64
-else ifneq ($(filter %86,$(UNAME_M)),)
-  ARCH := x86
-  $(error Unsupported processor architecture: $(UNAME_M))
-else ifneq ($(filter arm%,$(UNAME_M)),)
-  ARCH := arm
-else ifneq ($(filter aarch64%,$(UNAME_M)),)
-  ARCH := aarch64
-else
-  $(error Unknown processor architecture: $(UNAME_M))
+ifeq ($(GOARCH),unknown)
+	UNAME_M := $(shell uname -m)
+	ifeq ($(UNAME_M),x86_64)
+	  GOARCH := amd64
+	else ifneq ($(filter %86,$(UNAME_M)),)
+	  GOARCH := x86
+	  $(error Unsupported processor architecture: $(UNAME_M))
+	else ifneq ($(filter arm%,$(UNAME_M)),)
+	  GOARCH := arm64
+	else ifneq ($(filter aarch64%,$(UNAME_M)),)
+	  GOARCH := arm64
+	else
+	  $(error Unknown processor architecture: $(UNAME_M))
+	endif
 endif
 
 ifeq ($(SYSTEM),windows)
@@ -62,28 +67,30 @@ else
 	EXCLUDES = $(addprefix --exclude=,$(EXCLUDE_PATTERN))
 	EXTRACT = tar -xzf
 
-	ifeq ($(SYSTEM),linux)
+	ifeq ($(GOOS),linux)
 		MACHINE = linux
 
 		# Linux specific settings
 		# We do a static build on Linux using musl toolchain
 		CPREFIX = CC=musl-gcc
 		LDFLAGS = -linkmode external -extldflags "-static $(EXTLDFLAGS)"
-	else ifeq ($(SYSTEM),mac)
+	else ifeq ($(GOOS),darwin)
 		MACHINE = macos
 
 		# macOS specific settings
 		# dynamic build using default toolchain
 		LDFLAGS = -extldflags "$(EXTLDFLAGS)"
+	else ifeq ($(GOOS),windows)
+		# no op for now
 	else
-  		$(error Unknown operating system: $(SYSTEM))
+  		$(error Unknown operating system: $(GOOS))
 	endif
-	ifeq ($(ARCH),x86_64)
+	ifeq ($(GOARCH),amd64)
 		PLATFORM = $(MACHINE)-amd64
-	else ifneq ($(filter $(ARCH),arm aarch64),)
+	else ifeq ($(GOARCH),arm64)
 		PLATFORM = $(MACHINE)-arm64
 	else
-		$(error Unknown processor architecture: $(ARCH))
+		$(error Unknown processor architecture: $(GOARCH))
 	endif
 	FN = $(DEPLIB)_$(PLATFORM).tar.gz
 endif
@@ -98,7 +105,7 @@ $(DOWNLOAD_DEST):
 # Download the platform-specific dynamic library we rely on
 .PHONY: build
 build: $(UNZIP_DEST)
-	$(CPREFIX) CGO_ENABLED=1 go build -ldflags '$(LDFLAGS)'
+	$(CPREFIX) GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build -ldflags '$(LDFLAGS)'
 
 .PHONY: test
 test: $(UNZIP_DEST)

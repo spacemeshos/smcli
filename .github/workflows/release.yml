@@ -32,7 +32,7 @@ jobs:
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
         binary_name: smcli
-        build_command: make build
+        build_command: make build SYSTEM=${{ matrix.goos }} ARCH=${{ matrix.goarch }}
         asset_name: "smcli-${{ github.event.release.tag_name }}-${{ matrix.goos }}-${{ matrix.goarch }}"
         extra_files: LICENSE README.md
         # temporary
