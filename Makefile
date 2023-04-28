@@ -7,7 +7,7 @@ DEPLIB := lib$(DEPLIBNAME)
 # Exclude dylib files (we only need the static libs)
 EXCLUDE_PATTERN := "LICENSE" "*.so" "*.dylib"
 UNZIP_DEST := deps
-REAL_DEST := $(shell realpath $(UNZIP_DEST))
+REAL_DEST := $(shell realpath .)/$(UNZIP_DEST)
 DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIB).tar.gz
 EXTLDFLAGS := -L$(UNZIP_DEST) -l$(DEPLIBNAME)
 
