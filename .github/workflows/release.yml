@@ -44,7 +44,7 @@ jobs:
     - name: Build
       run: make build
     - name: Prepare files
-      if: !contains(matrix.name, 'windows')
+      if: ${{ !contains(matrix.name, 'windows') }}
       run: |
         mkdir artifacts
         mv LICENSE README.md ${{ env.BINARY_NAME }} artifacts
