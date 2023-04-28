@@ -11,7 +11,40 @@ REAL_DEST := $(shell realpath $(UNZIP_DEST))
 DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIB).tar.gz
 EXTLDFLAGS := -L$(UNZIP_DEST) -l$(DEPLIBNAME)
 
+# Default values
+ARCH := unknown
+SYSTEM := unknown
+
+# Detect operating system
 ifeq ($(OS),Windows_NT)
+  SYSTEM := windows
+else
+  UNAME_S := $(shell uname -s)
+  ifeq ($(UNAME_S),Linux)
+    SYSTEM := linux
+  else ifeq ($(UNAME_S),Darwin)
+    SYSTEM := mac
+  else
+    $(error Unknown operating system: $(UNAME_S))
+  endif
+endif
+
+# Detect processor architecture
+UNAME_M := $(shell uname -m)
+ifeq ($(UNAME_M),x86_64)
+  ARCH := x86_64
+else ifneq ($(filter %86,$(UNAME_M)),)
+  ARCH := x86
+  $(error Unsupported processor architecture: $(UNAME_M))
+else ifneq ($(filter arm%,$(UNAME_M)),)
+  ARCH := arm
+else ifneq ($(filter aarch64%,$(UNAME_M)),)
+  ARCH := aarch64
+else
+  $(error Unknown processor architecture: $(UNAME_M))
+endif
+
+ifeq ($(SYSTEM),windows)
 	# Windows settings
 	RM = del /Q /F
 	RMDIR = rmdir /S /Q
@@ -29,31 +62,28 @@ else
 	EXCLUDES = $(addprefix --exclude=,$(EXCLUDE_PATTERN))
 	EXTRACT = tar -xzf
 
-	# set some defaults
-	MACHINE = unknown
-	PLATFORM = unknown
-
-	UNAME_S := $(shell uname -s)
-	ifeq ($(UNAME_S),Linux)
+	ifeq ($(SYSTEM),linux)
 		MACHINE = linux
 
 		# Linux specific settings
 		# We do a static build on Linux using musl toolchain
 		CPREFIX = CC=musl-gcc
 		LDFLAGS = -linkmode external -extldflags "-static $(EXTLDFLAGS)"
-	endif
-	ifeq ($(UNAME_S),Darwin)
+	else ifeq ($(SYSTEM),mac)
 		MACHINE = macos
 
 		# macOS specific settings
+		# dynamic build using default toolchain
 		LDFLAGS = -extldflags "$(EXTLDFLAGS)"
+	else
+  		$(error Unknown operating system: $(SYSTEM))
 	endif
-	UNAME_P := $(shell uname -p)
-	ifeq ($(UNAME_P),x86_64)
+	ifeq ($(ARCH),x86_64)
 		PLATFORM = $(MACHINE)-amd64
-	endif
-	ifneq ($(filter arm%,$(UNAME_P)),)
+	else ifneq ($(filter $(ARCH),arm,aarch64))
 		PLATFORM = $(MACHINE)-arm64
+	else
+  		$(error Unknown processor architecture: $(ARCH))
 	endif
 	FN = $(DEPLIB)_$(PLATFORM).tar.gz
 endif
