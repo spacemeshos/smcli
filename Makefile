@@ -38,7 +38,6 @@ ifeq ($(GOARCH),unknown)
 	ifeq ($(UNAME_M),x86_64)
 	  GOARCH := amd64
 	else ifneq ($(filter %86,$(UNAME_M)),)
-	  GOARCH := x86
 	  $(error Unsupported processor architecture: $(UNAME_M))
 	else ifneq ($(filter arm%,$(UNAME_M)),)
 	  GOARCH := arm64
