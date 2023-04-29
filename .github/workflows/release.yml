@@ -42,10 +42,7 @@ jobs:
         go-version: ${{ env.go-version }}
     - name: Install musl
       if: contains(matrix.name, 'linux')
-      uses: awalsh128/cache-apt-pkgs-action@v1
-      with:
-        packages: musl-tools # provides musl-gcc
-        version: 1.0
+      run: sudo apt update && sudo apt install musl-tools
     - name: Build
       run: make build
     - name: Prepare files
