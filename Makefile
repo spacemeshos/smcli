@@ -48,6 +48,26 @@ ifeq ($(GOARCH),unknown)
 	endif
 endif
 
+ifeq ($(GOOS),linux)
+	MACHINE = linux
+
+	# Linux specific settings
+	# We do a static build on Linux using musl toolchain
+	CPREFIX = CC=musl-gcc
+	LDFLAGS = -linkmode external -extldflags "-static $(EXTLDFLAGS)"
+else ifeq ($(GOOS),darwin)
+	MACHINE = macos
+
+	# macOS specific settings
+	# dynamic build using default toolchain
+	LDFLAGS = -extldflags "$(EXTLDFLAGS)"
+else ifeq ($(GOOS),windows)
+	# static build using default toolchain
+	LDFLAGS = -linkmode external -extldflags "-static $(EXTLDFLAGS)"
+else
+	$(error Unknown operating system: $(GOOS))
+endif
+
 ifeq ($(SYSTEM),windows)
 	# Windows settings
 	RM = del /Q /F
@@ -66,24 +86,6 @@ else
 	EXCLUDES = $(addprefix --exclude=,$(EXCLUDE_PATTERN))
 	EXTRACT = tar -xzf
 
-	ifeq ($(GOOS),linux)
-		MACHINE = linux
-
-		# Linux specific settings
-		# We do a static build on Linux using musl toolchain
-		CPREFIX = CC=musl-gcc
-		LDFLAGS = -linkmode external -extldflags "-static $(EXTLDFLAGS)"
-	else ifeq ($(GOOS),darwin)
-		MACHINE = macos
-
-		# macOS specific settings
-		# dynamic build using default toolchain
-		LDFLAGS = -extldflags "$(EXTLDFLAGS)"
-	else ifeq ($(GOOS),windows)
-		LDFLAGS = -linkmode external -extldflags "-static $(EXTLDFLAGS)"
-	else
-  		$(error Unknown operating system: $(GOOS))
-	endif
 	ifeq ($(GOARCH),amd64)
 		PLATFORM = $(MACHINE)-amd64
 	else ifeq ($(GOARCH),arm64)
