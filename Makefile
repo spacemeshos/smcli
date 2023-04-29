@@ -57,7 +57,7 @@ ifeq ($(SYSTEM),windows)
 	FN = $(DEPLIB)_windows-amd64.zip
 	DOWNLOAD_DEST = $(UNZIP_DEST)/$(DEPLIB).zip
 	EXTRACT = 7z x -y
-	EXCLUDES = -x!$(EXCLUDE_PATTERN)
+	#EXCLUDES = -x!$(EXCLUDE_PATTERN)
 else
 	# Linux and macOS settings
 	RM = rm -f
@@ -80,7 +80,7 @@ else
 		# dynamic build using default toolchain
 		LDFLAGS = -extldflags "$(EXTLDFLAGS)"
 	else ifeq ($(GOOS),windows)
-		# no op for now
+		LDFLAGS = -linkmode external -extldflags "-static $(EXTLDFLAGS)"
 	else
   		$(error Unknown operating system: $(GOOS))
 	endif
