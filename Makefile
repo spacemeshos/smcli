@@ -1,6 +1,6 @@
 # Based on https://gist.github.com/trosendal/d4646812a43920bfe94e
 
-DEPTAG := 1.0.6
+DEPTAG := 1.0.7
 DEPLIBNAME := ed25519_bip32
 DEPLOC := https://github.com/spacemeshos/$(DEPLIBNAME)/releases/download
 DEPLIB := lib$(DEPLIBNAME)
