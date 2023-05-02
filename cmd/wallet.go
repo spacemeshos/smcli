@@ -176,7 +176,8 @@ keys in base58 format rather than hexidecimal.`,
 		t.SetCaption(caption)
 		maxWidth := 20
 		if printFull {
-			maxWidth = 99
+			// full key is 64 bytes which is 128 chars in hex, need to print at least this much
+			maxWidth = 150
 		}
 		// TODO: add spacemesh address format (bech32)
 		if printPrivate {
