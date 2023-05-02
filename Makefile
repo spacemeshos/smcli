@@ -63,7 +63,8 @@ else ifeq ($(GOOS),darwin)
 	LDFLAGS = -extldflags "$(EXTLDFLAGS)"
 else ifeq ($(GOOS),windows)
 	# static build using default toolchain
-	LDFLAGS = -linkmode external -extldflags "-static $(EXTLDFLAGS)"
+	# add a few extra required libs
+	LDFLAGS = -linkmode external -extldflags "-static $(EXTLDFLAGS) -lws2_32 -luserenv -lbcrypt"
 else
 	$(error Unknown operating system: $(GOOS))
 endif
