@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/jedib0t/go-pretty/v6 v6.4.6
-	github.com/spacemeshos/smkeys v1.0.1
+	github.com/spacemeshos/smkeys v1.0.2
 	github.com/stretchr/testify v1.8.2
 )
 
