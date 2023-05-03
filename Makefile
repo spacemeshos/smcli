@@ -104,7 +104,6 @@ $(DOWNLOAD_DEST):
 	$(MKDIR) $(UNZIP_DEST)
 	curl -sSfL $(DEPLOC)/v$(DEPTAG)/$(FN) -o $(DOWNLOAD_DEST)
 
-# Download the platform-specific dynamic library we rely on
 .PHONY: build
 build: $(UNZIP_DEST)
 	$(CPREFIX) GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build -ldflags '$(LDFLAGS)'
