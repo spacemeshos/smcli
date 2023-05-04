@@ -20,11 +20,14 @@ import (
 )
 
 var (
+	// debug indicates that the program is in debug mode
+	debug,
+
 	// printPrivate indicates that private keys should be printed
-	printPrivate bool
+	printPrivate,
 
 	// printFull indicates that full keys should be printed (not abbreviated)
-	printFull bool
+	printFull,
 
 	// printBase58 indicates that keys should be printed in base58 format
 	printBase58 bool
@@ -139,15 +142,9 @@ keys in base58 format rather than hexidecimal.`,
 		fmt.Println()
 		cobra.CheckErr(err)
 
-		// check debug mode
-		debugMode := false
-		if debug := cmd.Flags().Lookup("debug"); debug != nil {
-			debugMode = debug.Value.String() == "true"
-		}
-
 		// attempt to read it
 		wk := wallet.NewKey(wallet.WithPasswordOnly([]byte(password)))
-		w, err := wk.Open(f, debugMode)
+		w, err := wk.Open(f, debug)
 		cobra.CheckErr(err)
 
 		widthEnforcer := func(col string, maxLen int) string {
@@ -180,6 +177,7 @@ keys in base58 format rather than hexidecimal.`,
 			maxWidth = 150
 		}
 		// TODO: add spacemesh address format (bech32)
+		// https://github.com/spacemeshos/smcli/issues/38
 		if printPrivate {
 			t.AppendHeader(table.Row{
 				"pubkey",
@@ -258,4 +256,5 @@ func init() {
 	readCmd.Flags().BoolVarP(&printPrivate, "private", "p", false, "Print private keys")
 	readCmd.Flags().BoolVarP(&printFull, "full", "f", false, "Print full keys (no abbreviation)")
 	readCmd.Flags().BoolVar(&printBase58, "base58", false, "Print keys in base58 (rather than hex)")
+	readCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode")
 }

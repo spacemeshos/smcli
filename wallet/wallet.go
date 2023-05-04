@@ -126,6 +126,7 @@ func walletFromMnemonicAndAccounts(m string, masterKp *EDKeyPair, kp []*EDKeyPai
 // accountsFromMaster generates one or more accounts from a master keypair and seed. Accounts use sequential HD paths.
 // The master keypair does not contain the seed that was used to generate it, so it needs to be passed in explicitly.
 func accountsFromMaster(masterKeypair *EDKeyPair, masterSeed []byte, n int) (accounts []*EDKeyPair, err error) {
+	accounts = make([]*EDKeyPair, 0, n)
 	for i := 0; i < n; i++ {
 		acct, err := masterKeypair.NewChildKeyPair(masterSeed, i)
 		if err != nil {

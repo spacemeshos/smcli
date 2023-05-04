@@ -71,6 +71,8 @@ endif
 
 ifeq ($(SYSTEM),windows)
 	# Windows settings
+	# TODO: this is probably unnecessary, most Windows dev environments (including GHA)
+	# should support bash
 	RM = del /Q /F
 	RMDIR = rmdir /S /Q
 	MKDIR = mkdir
@@ -78,6 +80,8 @@ ifeq ($(SYSTEM),windows)
 	FN = $(DEPLIB)_windows-amd64.zip
 	DOWNLOAD_DEST = $(UNZIP_DEST)/$(DEPLIB).zip
 	EXTRACT = 7z x -y
+
+	# TODO: fix this, it doesn't seem to work as expected
 	#EXCLUDES = -x!$(EXCLUDE_PATTERN)
 else
 	# Linux and macOS settings
