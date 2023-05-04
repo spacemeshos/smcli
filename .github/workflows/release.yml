@@ -37,7 +37,8 @@ jobs:
       with:
         go-version: ${{ env.go-version }}
     - name: Install musl
-      if: contains(matrix.name, 'linux')
+      # only run on GH-hosted runner; self-hosted runner already has the package
+      if: matrix.name == "linux-amd64"
       uses: awalsh128/cache-apt-pkgs-action@v1
       with:
         packages: musl-tools # provides musl-gcc
