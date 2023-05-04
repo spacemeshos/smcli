@@ -9,8 +9,8 @@ import (
 	"crypto/sha512"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/xdg-go/pbkdf2"
@@ -156,7 +156,7 @@ func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, 
 	return
 }
 
-func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
+func (k *WalletKey) Open(file io.Reader, debugMode bool) (w *Wallet, err error) {
 	ew := &EncryptedWalletFile{}
 	if err = json.NewDecoder(file).Decode(ew); err != nil {
 		return
@@ -186,7 +186,9 @@ func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
 	if err != nil {
 		return
 	}
-	log.Println("Decrypted JSON data:", string(plaintext))
+	if debugMode {
+		log.Println("Decrypted JSON data:", string(plaintext))
+	}
 	secrets := &walletSecrets{}
 	if err = json.Unmarshal(plaintext, secrets); err != nil {
 		return
@@ -200,7 +202,7 @@ func (k *WalletKey) Open(file *os.File) (w *Wallet, err error) {
 	return
 }
 
-func (k *WalletKey) Export(file *os.File, w *Wallet) (err error) {
+func (k *WalletKey) Export(file io.Writer, w *Wallet) (err error) {
 	// encrypt the secrets
 	plaintext, err := json.Marshal(w.Secrets)
 	if err != nil {

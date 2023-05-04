@@ -7,7 +7,6 @@ import (
 )
 
 const (
-	DefaultEncryptionSalt = "Spacemesh blockmesh"
 	// MaxAccountsPerWallet is the maximum number of accounts that a single wallet file may contain.
 	// It's relatively arbitrary but we need some limit.
 	MaxAccountsPerWallet = 128

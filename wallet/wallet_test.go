@@ -1,33 +1,50 @@
-package wallet_test
+package wallet
 
 import (
 	"crypto/ed25519"
+	"fmt"
+	"github.com/tyler-smith/go-bip39"
 
 	"encoding/hex"
 	"testing"
 
-	"github.com/spacemeshos/smcli/wallet"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewWallet(t *testing.T) {
-	w, err := wallet.NewWallet()
+const Bip44Prefix = "m/44'/540'"
+
+func TestRandomAndMnemonic(t *testing.T) {
+	n := 3
+
+	// generate a wallet with a random mnemonic
+	w1, err := NewMultiWalletRandomMnemonic(n)
 	require.NoError(t, err)
-	require.NotNil(t, w)
+	require.Len(t, w1.Secrets.Accounts, n)
+
+	// now use that mnemonic to generate a new wallet
+	w2, err := NewMultiWalletFromMnemonic(w1.Mnemonic(), n)
+	require.NoError(t, err)
+	require.Len(t, w2.Secrets.Accounts, n)
+
+	// make sure all the keys match
+	for i := 0; i < n; i++ {
+		require.Equal(t, w1.Secrets.Accounts[i].Private, w2.Secrets.Accounts[i].Private)
+		require.Equal(t, w1.Secrets.Accounts[i].Public, w2.Secrets.Accounts[i].Public)
+	}
 }
 
-func TestNewWalletFromSeed(t *testing.T) {
-	seed := []byte("spacemesh is the best blockchain")
-	w, err := wallet.NewWalletFromSeed(seed)
+func TestAccountFromSeed(t *testing.T) {
+	master, err := NewMasterKeyPair(goodSeed)
 	require.NoError(t, err)
-	require.NotNil(t, w)
-	require.Len(t, w.Secrets.Accounts, 1)
-	keypair := w.Secrets.Accounts[0]
+	accts, err := accountsFromMaster(master, goodSeed, 1)
+	require.NoError(t, err)
+	require.Len(t, accts, 1)
+	keypair := accts[0]
 
 	expPubKey :=
-		"680e002010e2a12d17922bade5c3c25d54a911abd41f48e16b3bbe0c83df96a9"
+		"feae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd"
 	expPrivKey :=
-		"73706163656d65736820697320746865206265737420626c6f636b636861696e680e002010e2a12d17922bade5c3c25d54a911abd41f48e16b3bbe0c83df96a9"
+		"05fe9affa5562ca833faf3803ce5f6f7615d3c37c4a27903492027f6853e486dfeae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd"
 
 	actualPubKey := hex.EncodeToString(keypair.Public)
 	actualPrivKey := hex.EncodeToString(keypair.Private)
@@ -39,119 +56,53 @@ func TestNewWalletFromSeed(t *testing.T) {
 	sig := ed25519.Sign(ed25519.PrivateKey(keypair.Private), msg)
 	require.True(t, ed25519.Verify(ed25519.PublicKey(keypair.Public), msg, sig))
 
-	// create another wallet from the same seed
-	w2, err := wallet.NewWalletFromSeed(seed)
+	// create another account from the same seed
+	accts2, err := accountsFromMaster(master, goodSeed, 1)
 	require.NoError(t, err)
-	require.NotNil(t, w2)
-	require.Equal(t, w.Secrets.Accounts[0].Public, w2.Secrets.Accounts[0].Public)
-	require.Equal(t, w.Secrets.Accounts[0].Private, w2.Secrets.Accounts[0].Private)
-	require.Equal(t, w.Secrets.Accounts[0].Salt, w2.Secrets.Accounts[0].Salt)
+	require.Len(t, accts2, 1)
+	require.Equal(t, keypair.Public, accts2[0].Public)
+	require.Equal(t, keypair.Private, accts2[0].Private)
 }
 
-//func TestWalletFromNewMnemonic(t *testing.T) {
-//	entropy, _ := bip39.NewEntropy(256)
-//	mnemonic, _ := bip39.NewMnemonic(entropy)
-//	w := wallet.NewWalletFromSeed(mnemonic)
-//
-//	require.NotNil(t, w)
-//	require.Equal(t, mnemonic, w.Mnemonic())
-//}
+func TestWalletFromNewMnemonic(t *testing.T) {
+	entropy, _ := bip39.NewEntropy(256)
+	mnemonic, _ := bip39.NewMnemonic(entropy)
+	w, err := NewMultiWalletFromMnemonic(mnemonic, 1)
 
-//func TestWalletFromGivenMnemonic(t *testing.T) {
-//	mnemonic := "film theme cheese broken kingdom destroy inch ready wear inspire shove pudding"
-//	w := wallet.NewWalletFromSeed(mnemonic)
-//	keyPath, err := wallet.StringToHDPath("m/44'/540'/0'/0'/0'")
-//	require.NoError(t, err)
-//	keyPair, err := w.ComputeKeyPair(keyPath)
-//	require.NoError(t, err)
-//	expPubKey :=
-//		"205d8d4e458b163d5ba15ac712951d5659cc51379e7e0ad13acc97303aa85093"
-//	expPrivKey :=
-//		"669d091195f950e6255a2e8778eea7be4f7a66afe855957404ec1520c8a11ff1205d8d4e458b163d5ba15ac712951d5659cc51379e7e0ad13acc97303aa85093"
-//
-//	actualPubKey := hex.EncodeToString(keyPair.Public)
-//	actualPrivKey := hex.EncodeToString(keyPair.Private)
-//	require.Equal(t, expPubKey, actualPubKey)
-//	require.Equal(t, expPrivKey, actualPrivKey)
-//
-//	msg := []byte("hello world")
-//	// Sanity check that the keypair works with the standard ed25519 library
-//	sig := ed25519.Sign(keyPair.Private, msg)
-//	require.True(t, ed25519.Verify(keyPair.Public, msg, sig))
-//}
+	require.NoError(t, err)
+	require.NotNil(t, w)
+	require.Equal(t, mnemonic, w.Mnemonic())
+}
 
-//func TestKeysInWalletMaintainExpectedPath(t *testing.T) {
-//	entropy, _ := bip39.NewEntropy(256)
-//	mnemonic, _ := bip39.NewMnemonic(entropy)
-//	w := wallet.NewWalletFromSeed(mnemonic)
-//
-//	for i := 0; i < 100; i++ {
-//		path, _ := wallet.StringToHDPath(fmt.Sprintf("m/44'/540'/%d'/%d'/%d'", i, i, i))
-//		keyPair, err := w.ComputeKeyPair(path)
-//		require.NoError(t, err)
-//		require.Equal(t, path, keyPair.Path)
-//	}
-//}
+func TestWalletFromGivenMnemonic(t *testing.T) {
+	mnemonic := "film theme cheese broken kingdom destroy inch ready wear inspire shove pudding"
+	w, err := NewMultiWalletFromMnemonic(mnemonic, 1)
+	require.NoError(t, err)
+	expPubKey :=
+		"de30fc9b812248583da6259433626fcdd2cb5ce589b00047b81e127950b9bca6"
+	expPrivKey :=
+		"cd85df73aa3bc31de2f0b69bb1421df7eb0cdca7cb170a457869ab337749dae1de30fc9b812248583da6259433626fcdd2cb5ce589b00047b81e127950b9bca6"
 
-//func TestKeysInWalletMaintainSalt(t *testing.T) {
-//	entropy, _ := bip39.NewEntropy(256)
-//	mnemonic, _ := bip39.NewMnemonic(entropy)
-//	w := wallet.NewWalletFromSeed(mnemonic)
-//	fmt.Println(string(w.Salt()))
-//
-//	path, _ := wallet.StringToHDPath("m/44'/540'")
-//	keyPair, err := w.ComputeKeyPair(path)
-//	require.NoError(t, err)
-//	require.Equal(t, keyPair.Salt, w.Salt())
-//	// ... and try with a different length path
-//	path, _ = wallet.StringToHDPath("m/44'/540'/0'")
-//	keyPair, err = w.ComputeKeyPair(path)
-//	require.NoError(t, err)
-//	require.Equal(t, keyPair.Salt, w.Salt())
-//}
+	actualPubKey := hex.EncodeToString(w.Secrets.Accounts[0].Public)
+	actualPrivKey := hex.EncodeToString(w.Secrets.Accounts[0].Private)
+	require.Equal(t, expPubKey, actualPubKey)
+	require.Equal(t, expPrivKey, actualPrivKey)
 
-//func TestComputeKeyPairFailsForUnhardenedPathSegment(t *testing.T) {
-//	entropy, _ := bip39.NewEntropy(256)
-//	mnemonic, _ := bip39.NewMnemonic(entropy)
-//	w := wallet.NewWalletFromSeed(mnemonic)
-//	path, _ := wallet.StringToHDPath("m/44'/540'/0'/0'/0")
-//	_, err := w.ComputeKeyPair(path)
-//	require.Error(t, err)
-//}
+	msg := []byte("hello world")
 
-func benchmarkComputeKeyPair(n int, b *testing.B) {
+	// Sanity check that the keypair works with the standard ed25519 library
+	sig := ed25519.Sign(ed25519.PrivateKey(w.Secrets.Accounts[0].Private), msg)
+	require.True(t, ed25519.Verify(ed25519.PublicKey(w.Secrets.Accounts[0].Public), msg, sig))
+}
+
+func TestKeysInWalletMaintainExpectedPath(t *testing.T) {
+	n := 100
+	w, err := NewMultiWalletRandomMnemonic(n)
+	require.NoError(t, err)
+
 	for i := 0; i < n; i++ {
-		wallet.NewRandomAccount()
+		expectedPath := fmt.Sprintf("%s/0'/0'/%d'", Bip44Prefix, i)
+		path := w.Secrets.Accounts[i].Path
+		require.Equal(t, expectedPath, HDPathToString(path))
 	}
-}
-
-//func benchmarkComputeKeyPair(n int, b *testing.B) {
-//	entropy, _ := bip39.NewEntropy(256)
-//	mnemonic, _ := bip39.NewMnemonic(entropy)
-//	w := wallet.NewWalletFromSeed(mnemonic)
-//	for i := 0; i < b.N; i++ { // benchmark-controlled loop
-//		for j := 0; j < n; j++ { // specified number of iterations
-//			path, _ := wallet.StringToHDPath(fmt.Sprintf("m/44'/540'/0'/0'/%d'", j))
-//			w.ComputeKeyPair(path)
-//		}
-//	}
-//}
-
-func Benchmark10000(b *testing.B) {
-	benchmarkComputeKeyPair(10000, b)
-}
-func Benchmark20000(b *testing.B) {
-	benchmarkComputeKeyPair(20000, b)
-}
-func Benchmark30000(b *testing.B) {
-	benchmarkComputeKeyPair(30000, b)
-}
-func Benchmark40000(b *testing.B) {
-	benchmarkComputeKeyPair(40000, b)
-}
-func Benchmark50000(b *testing.B) {
-	benchmarkComputeKeyPair(50000, b)
-}
-func Benchmark100000(b *testing.B) {
-	benchmarkComputeKeyPair(100000, b)
 }
