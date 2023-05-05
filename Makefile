@@ -108,6 +108,17 @@ $(DOWNLOAD_DEST):
 	$(MKDIR) $(UNZIP_DEST)
 	curl -sSfL $(DEPLOC)/v$(DEPTAG)/$(FN) -o $(DOWNLOAD_DEST)
 
+.PHONY: install
+install:
+	go mod download
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.52.0
+	go install gotest.tools/gotestsum@v1.9.0
+	go install honnef.co/go/tools/cmd/staticcheck@v0.3.3
+
+.PHONY: tidy
+tidy:
+	go mod tidy
+
 .PHONY: build
 build: $(UNZIP_DEST)
 	$(CPREFIX) GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build -ldflags '$(LDFLAGS)'
@@ -115,6 +126,38 @@ build: $(UNZIP_DEST)
 .PHONY: test
 test: $(UNZIP_DEST)
 	LD_LIBRARY_PATH=$(REAL_DEST) go test -v -ldflags "-extldflags \"-L$(REAL_DEST) -led25519_bip32\"" ./...
+
+.PHONY: test-tidy
+test-tidy:
+	# Working directory must be clean, or this test would be destructive
+	git diff --quiet || (echo "\033[0;31mWorking directory not clean!\033[0m" && git --no-pager diff && exit 1)
+	# We expect `go mod tidy` not to change anything, the test should fail otherwise
+	make tidy
+	git diff --exit-code || (git --no-pager diff && git checkout . && exit 1)
+
+.PHONY: test-fmt
+test-fmt:
+	git diff --quiet || (echo "\033[0;31mWorking directory not clean!\033[0m" && git --no-pager diff && exit 1)
+	# We expect `go fmt` not to change anything, the test should fail otherwise
+	go fmt ./...
+	git diff --exit-code || (git --no-pager diff && git checkout . && exit 1)
+
+.PHONY: lint
+lint:
+	./bin/golangci-lint run --config .golangci.yml
+
+# Auto-fixes golangci-lint issues where possible.
+.PHONY: lint-fix
+lint-fix:
+	./bin/golangci-lint run --config .golangci.yml --fix
+
+.PHONY: lint-github-action
+lint-github-action:
+	./bin/golangci-lint run --config .golangci.yml --out-format=github-actions
+
+.PHONY: staticcheck
+staticcheck: 
+	staticcheck ./...
 
 clean:
 	$(RM) $(DOWNLOAD_DEST)
