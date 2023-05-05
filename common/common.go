@@ -30,15 +30,19 @@ func DotDirectory() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home + "/.spacemesh")
 }
+
 func ConfigFileName() string {
 	return "config"
 }
+
 func ConfigFileType() string {
 	return "yaml"
 }
+
 func StateFile() string {
 	return filepath.Join(DotDirectory(), "state.json")
 }
+
 func WalletFile() string {
 	return filepath.Join(DotDirectory(), "wallet_"+NowTimeString()+".json")
 }

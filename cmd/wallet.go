@@ -1,39 +1,38 @@
-/*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/btcsuite/btcutil/base58"
-	"github.com/hashicorp/go-secure-stdlib/password"
-	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/spacemeshos/smcli/common"
-	"github.com/spacemeshos/smcli/wallet"
-	"github.com/spf13/cobra"
 	"log"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/btcsuite/btcutil/base58"
+	"github.com/hashicorp/go-secure-stdlib/password"
+	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spf13/cobra"
+
+	"github.com/spacemeshos/smcli/common"
+	"github.com/spacemeshos/smcli/wallet"
 )
 
 var (
-	// debug indicates that the program is in debug mode
-	debug,
+	// debug indicates that the program is in debug mode.
+	debug bool
 
-	// printPrivate indicates that private keys should be printed
-	printPrivate,
+	// printPrivate indicates that private keys should be printed.
+	printPrivate bool
 
-	// printFull indicates that full keys should be printed (not abbreviated)
-	printFull,
+	// printFull indicates that full keys should be printed (not abbreviated).
+	printFull bool
 
-	// printBase58 indicates that keys should be printed in base58 format
+	// printBase58 indicates that keys should be printed in base58 format.
 	printBase58 bool
 )
 
-// walletCmd represents the wallet command
+// walletCmd represents the wallet command.
 var walletCmd = &cobra.Command{
 	Use:   "wallet",
 	Short: "A brief description of your command",
@@ -45,7 +44,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 }
 
-// createCmd represents the create command
+// createCmd represents the create command.
 var createCmd = &cobra.Command{
 	Use:   "create [numaccounts]",
 	Short: "Generate a new wallet file from a BIP-39-compatible mnemonic",
@@ -93,7 +92,7 @@ You can choose to use an existing mnemonic or generate a new, random mnemonic.`,
 		fmt.Println()
 		cobra.CheckErr(err)
 		wk := wallet.NewKey(wallet.WithRandomSalt(), wallet.WithPbkdf2Password([]byte(password)))
-		err = os.MkdirAll(common.DotDirectory(), 0700)
+		err = os.MkdirAll(common.DotDirectory(), 0o700)
 		cobra.CheckErr(err)
 
 		// Make sure we're not overwriting an existing wallet (this should not happen)
@@ -109,7 +108,7 @@ You can choose to use an existing mnemonic or generate a new, random mnemonic.`,
 		}
 
 		// Now open for writing
-		f2, err := os.OpenFile(walletFn, os.O_WRONLY|os.O_CREATE, 0600)
+		f2, err := os.OpenFile(walletFn, os.O_WRONLY|os.O_CREATE, 0o600)
 		cobra.CheckErr(err)
 		defer f2.Close()
 		cobra.CheckErr(wk.Export(f2, w))
@@ -118,7 +117,7 @@ You can choose to use an existing mnemonic or generate a new, random mnemonic.`,
 	},
 }
 
-// readCmd reads an existing wallet file
+// readCmd reads an existing wallet file.
 var readCmd = &cobra.Command{
 	Use:   "read [wallet file] [--full/-f] [--private/-p] [--base58]",
 	Short: "Reads an existing wallet file",
@@ -126,15 +125,15 @@ var readCmd = &cobra.Command{
 successfully read and decrypted, whether the password to open the file is correct, etc.
 It prints the accounts from the wallet file. By default it does not print private keys.
 Add --private to print private keys. Add --full to print full keys. Add --base58 to print
-keys in base58 format rather than hexidecimal.`,
+keys in base58 format rather than hexadecimal.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		walletFn := args[0]
 
 		// make sure the file exists
 		f, err := os.Open(walletFn)
-		defer f.Close()
 		cobra.CheckErr(err)
+		defer f.Close()
 
 		// get the password
 		fmt.Print("Enter wallet password: ")

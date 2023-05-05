@@ -6,6 +6,8 @@ import (
 	"regexp"
 )
 
+//lint:file-ignore SA4016 ignore ineffective bitwise operations to aid readability
+
 // BIP32HardenedKeyStart: keys with index >= this must be hardened as per BIP32.
 // https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki#extended-keys
 const BIP32HardenedKeyStart uint32 = 0x80000000
@@ -40,15 +42,19 @@ func (p *HDPath) String() string {
 func (p *HDPath) Purpose() uint32 {
 	return (*p)[HDPurposeSegment]
 }
+
 func (p *HDPath) CoinType() uint32 {
 	return (*p)[HDCoinTypeSegment]
 }
+
 func (p *HDPath) Account() uint32 {
 	return (*p)[HDAccountSegment]
 }
+
 func (p *HDPath) Chain() uint32 {
 	return (*p)[HDChainSegment]
 }
+
 func (p *HDPath) Index() uint32 {
 	return (*p)[HDIndexSegment]
 }
@@ -59,7 +65,7 @@ func (p *HDPath) Extend(idx uint32) HDPath {
 
 // Root of the path is m/purpose' (m/44')
 // https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki#purpose
-// We use this to indicate that we're using the BIP44 hierarchy
+// We use this to indicate that we're using the BIP44 hierarchy.
 func BIP44Purpose() uint32 {
 	return 0x8000002C
 }
@@ -71,8 +77,9 @@ func BIP44SpacemeshCoinType() uint32 {
 }
 
 // After the coin type comes the account (m/44'/540'/account')
-// For now we only support account 0'
+// For now we only support account 0'.
 func BIP44Account() uint32 {
+	//nolint:staticcheck // ignore ineffective bitwise operations to aid readability
 	return BIP32HardenedKeyStart | 0
 }
 
@@ -88,13 +95,14 @@ func BIP44Account() uint32 {
 // (m/44'/540'/account'/chain')
 // For now we only support "chain" 0. We may want to use a different chain for testnet.
 func BIP44HardenedChain() uint32 {
+	//nolint:staticcheck // ignore ineffective bitwise operations to aid readability
 	return BIP32HardenedKeyStart | 0
 }
 
 // After the Hardened Chain level comes the address indices, as of now, we don't
 // support un-hardened derivation so we'll continue our deviation from the spec
 // here. All addresses will be hardened.
-// (m/44'/540'/account'/chain'/address_index')
+// (m/44'/540'/account'/chain'/address_index').
 func BIP44HardenedAccountIndex(hai uint32) uint32 {
 	return BIP32HardenedKeyStart | hai
 }
@@ -118,7 +126,7 @@ func IsPathCompletelyHardened(path HDPath) bool {
 }
 
 // HDPathToString converts a BIP44 HD path to a string of the form
-// "m/44'/540'/account'/chain'/address_index'"
+// "m/44'/540'/account'/chain'/address_index'".
 func HDPathToString(path HDPath) string {
 	s := "m"
 	for _, p := range path {
@@ -138,7 +146,7 @@ func parseUint(s string) uint {
 }
 
 // StringToHDPath converts a BIP44 HD path string of the form
-// (m/44'/540'/account'/chain'/address_index') to its uint32 slice representation
+// (m/44'/540'/account'/chain'/address_index') to its uint32 slice representation.
 func StringToHDPath(s string) (HDPath, error) {
 	// regex of the form m/44'/540'/account'/chain'/address_index'
 	rWholePath := regexp.MustCompile(`^m(/\d+'?)+$`)

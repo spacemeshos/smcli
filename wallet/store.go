@@ -19,19 +19,23 @@ import (
 const EncKeyLen = 32
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2
-const Pbkdf2Iterations = 210000
-const Pbkdf2Dklen = 256
-const Pbkdf2SaltBytesLen = 16
+const (
+	Pbkdf2Iterations   = 210000
+	Pbkdf2Dklen        = 256
+	Pbkdf2SaltBytesLen = 16
+)
 
 var Pbkdf2HashFunc = sha512.New
 
-type WalletKeyOpt func(*WalletKey)
-type WalletKey struct {
-	key        []byte
-	pw         []byte
-	salt       []byte
-	iterations int
-}
+type (
+	WalletKeyOpt func(*WalletKey)
+	WalletKey    struct {
+		key        []byte
+		pw         []byte
+		salt       []byte
+		iterations int
+	}
+)
 
 func NewKey(opts ...WalletKeyOpt) WalletKey {
 	w := &WalletKey{}
@@ -156,10 +160,10 @@ func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, 
 	return
 }
 
-func (k *WalletKey) Open(file io.Reader, debugMode bool) (w *Wallet, err error) {
+func (k *WalletKey) Open(file io.Reader, debugMode bool) (*Wallet, error) {
 	ew := &EncryptedWalletFile{}
-	if err = json.NewDecoder(file).Decode(ew); err != nil {
-		return
+	if err := json.NewDecoder(file).Decode(ew); err != nil {
+		return nil, err
 	}
 
 	// set the salt, and warn if it's different
@@ -184,22 +188,22 @@ func (k *WalletKey) Open(file io.Reader, debugMode bool) (w *Wallet, err error) 
 	// TODO: before decrypting, check that other meta params match
 	plaintext, err := k.decrypt(encWallet, nonce)
 	if err != nil {
-		return
+		return nil, err
 	}
 	if debugMode {
 		log.Println("Decrypted JSON data:", string(plaintext))
 	}
 	secrets := &walletSecrets{}
-	if err = json.Unmarshal(plaintext, secrets); err != nil {
-		return
+	if err := json.Unmarshal(plaintext, secrets); err != nil {
+		return nil, err
 	}
 
 	// we have everything we need, construct and return the wallet.
-	w = &Wallet{
+	w := &Wallet{
 		Meta:    ew.Meta,
 		Secrets: *secrets,
 	}
-	return
+	return w, nil
 }
 
 func (k *WalletKey) Export(file io.Writer, w *Wallet) (err error) {
