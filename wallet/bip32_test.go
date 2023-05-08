@@ -3,9 +3,9 @@ package wallet
 import (
 	"crypto/ed25519"
 	"encoding/hex"
-	"github.com/spacemeshos/smkeys/bip32"
 	"testing"
 
+	"github.com/spacemeshos/smkeys/bip32"
 	"github.com/stretchr/testify/require"
 )
 
@@ -23,7 +23,7 @@ func TestNonHardenedPath(t *testing.T) {
 	require.False(t, IsPathCompletelyHardened(path2Hd))
 }
 
-// Test that path string produces expected path and vice-versa
+// Test that path string produces expected path and vice-versa.
 func TestPath(t *testing.T) {
 	path1Str := "m/44'/540'/0'/0'/0'"
 	path1Hd, err := StringToHDPath(path1Str)
@@ -35,7 +35,7 @@ func TestPath(t *testing.T) {
 	require.Equal(t, path1Hd, path2Hd)
 }
 
-// Test deriving a child keypair
+// Test deriving a child keypair.
 func TestChildKeyPair(t *testing.T) {
 	defaultPath := DefaultPath()
 	path := defaultPath.Extend(BIP44HardenedAccountIndex(0))

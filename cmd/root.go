@@ -1,20 +1,18 @@
-/*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/spacemeshos/smcli/common"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/spacemeshos/smcli/common"
 )
 
 var cfgFile string
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "sm",
 	Short: "The official CLI for Spacemesh.",

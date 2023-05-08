@@ -5,8 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/spacemeshos/smcli/common"
+
 	smbip32 "github.com/spacemeshos/smkeys/bip32"
+
+	"github.com/spacemeshos/smcli/common"
 )
 
 // Function names inspired by https://github.com/tyler-smith/go-bip32/blob/master/bip32.go

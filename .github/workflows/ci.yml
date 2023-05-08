@@ -11,8 +11,52 @@ on:
     branches: [main]
 
 jobs:
+  quicktests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: set up go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.go-version }}
+      - name: install musl
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: musl-tools # provides musl-gcc
+          version: 1.0
+      - name: fmt, tidy
+        run: |
+          make install
+          make test-fmt
+          make test-tidy
+      - name: staticcheck
+        run: make staticcheck
+
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: set up go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.go-version }}
+      - name: install musl
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: musl-tools # provides musl-gcc
+          version: 1.0
+      - name: setup env
+        run: make install
+      - name: lint
+        run: make lint-github-action
+
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     steps:
       - name: checkout
         uses: actions/checkout@v3
@@ -27,5 +71,21 @@ jobs:
           version: 1.0
       - name: build
         run: make build
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: set up go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.go-version }}
+      - name: install musl
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: musl-tools # provides musl-gcc
+          version: 1.0
       - name: go test
         run: make test

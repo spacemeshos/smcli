@@ -5,20 +5,22 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/spacemeshos/smcli/common"
+
 	"github.com/tyler-smith/go-bip39"
+
+	"github.com/spacemeshos/smcli/common"
 )
 
 // Wallet is the basic data structure.
 type Wallet struct {
-	//keystore string
-	//password string
-	//unlocked bool
+	// keystore string
+	// password string
+	// unlocked bool
 	Meta    walletMetadata `json:"meta"`
 	Secrets walletSecrets  `json:"crypto"`
 }
 
-// EncryptedWalletFile is the encrypted representation of the wallet on the filesystem
+// EncryptedWalletFile is the encrypted representation of the wallet on the filesystem.
 type EncryptedWalletFile struct {
 	Meta    walletMetadata         `json:"meta"`
 	Secrets walletSecretsEncrypted `json:"crypto"`
@@ -28,11 +30,11 @@ type walletMetadata struct {
 	DisplayName string `json:"displayName"`
 	Created     string `json:"created"`
 	GenesisID   string `json:"genesisID"`
-	//NetID       int    `json:"netId"`
+	// NetID       int    `json:"netId"`
 
 	// is this needed?
-	//Type WalletType
-	//RemoteAPI string
+	// Type WalletType
+	// RemoteAPI string
 }
 
 type hexEncodedCiphertext []byte

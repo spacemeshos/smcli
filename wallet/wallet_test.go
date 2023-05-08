@@ -2,13 +2,12 @@ package wallet
 
 import (
 	"crypto/ed25519"
-	"fmt"
-	"github.com/tyler-smith/go-bip39"
-
 	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/tyler-smith/go-bip39"
 )
 
 const Bip44Prefix = "m/44'/540'"
@@ -41,10 +40,8 @@ func TestAccountFromSeed(t *testing.T) {
 	require.Len(t, accts, 1)
 	keypair := accts[0]
 
-	expPubKey :=
-		"feae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd"
-	expPrivKey :=
-		"05fe9affa5562ca833faf3803ce5f6f7615d3c37c4a27903492027f6853e486dfeae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd"
+	expPubKey := "feae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd"
+	expPrivKey := "05fe9affa5562ca833faf3803ce5f6f7615d3c37c4a27903492027f6853e486dfeae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd"
 
 	actualPubKey := hex.EncodeToString(keypair.Public)
 	actualPrivKey := hex.EncodeToString(keypair.Private)
@@ -78,10 +75,8 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 	mnemonic := "film theme cheese broken kingdom destroy inch ready wear inspire shove pudding"
 	w, err := NewMultiWalletFromMnemonic(mnemonic, 1)
 	require.NoError(t, err)
-	expPubKey :=
-		"de30fc9b812248583da6259433626fcdd2cb5ce589b00047b81e127950b9bca6"
-	expPrivKey :=
-		"cd85df73aa3bc31de2f0b69bb1421df7eb0cdca7cb170a457869ab337749dae1de30fc9b812248583da6259433626fcdd2cb5ce589b00047b81e127950b9bca6"
+	expPubKey := "de30fc9b812248583da6259433626fcdd2cb5ce589b00047b81e127950b9bca6"
+	expPrivKey := "cd85df73aa3bc31de2f0b69bb1421df7eb0cdca7cb170a457869ab337749dae1de30fc9b812248583da6259433626fcdd2cb5ce589b00047b81e127950b9bca6"
 
 	actualPubKey := hex.EncodeToString(w.Secrets.Accounts[0].Public)
 	actualPrivKey := hex.EncodeToString(w.Secrets.Accounts[0].Private)
