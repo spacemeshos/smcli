@@ -108,6 +108,22 @@ func NewMultiWalletFromMnemonic(m string, n int) (*Wallet, error) {
 	return walletFromMnemonicAndAccounts(m, masterKeyPair, accounts)
 }
 
+func NewMultiWalletFromLedger(n int) (*Wallet, error) {
+	if n < 0 || n > common.MaxAccountsPerWallet {
+		return nil, fmt.Errorf("invalid number of accounts")
+	}
+	masterKeyPair, err := NewMasterKeyPairFromLedger()
+	if err != nil {
+		return nil, err
+	}
+	// seed is not used in case of ledger
+	accounts, err := accountsFromMaster(masterKeyPair, []byte{}, n)
+	if err != nil {
+		return nil, err
+	}
+	return walletFromMnemonicAndAccounts("(none)", masterKeyPair, accounts)
+}
+
 func walletFromMnemonicAndAccounts(m string, masterKp *EDKeyPair, kp []*EDKeyPair) (*Wallet, error) {
 	w := &Wallet{
 		Meta: walletMetadata{

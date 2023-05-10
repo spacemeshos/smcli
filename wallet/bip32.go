@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	smbip32 "github.com/spacemeshos/smkeys/bip32"
+	ledger "github.com/spacemeshos/smkeys/remote-wallet"
 
 	"github.com/spacemeshos/smcli/common"
 )
@@ -15,6 +16,13 @@ import (
 // We assume all keys are hardened.
 
 type PublicKey ed25519.PublicKey
+
+type keyType int
+
+const (
+	typeSoftware keyType = iota
+	typeLedger
+)
 
 func (k *PublicKey) MarshalJSON() ([]byte, error) {
 	return json.Marshal(hex.EncodeToString(*k))
@@ -50,6 +58,7 @@ type EDKeyPair struct {
 	Path        HDPath     `json:"path"`
 	Public      PublicKey  `json:"publicKey"`
 	Private     PrivateKey `json:"secretKey"`
+	KeyType     keyType    `json:"keyType"`
 }
 
 func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
@@ -70,15 +79,41 @@ func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
 
 func (kp *EDKeyPair) NewChildKeyPair(seed []byte, childIdx int) (*EDKeyPair, error) {
 	path := kp.Path.Extend(BIP44HardenedAccountIndex(uint32(childIdx)))
-	key, err := smbip32.Derive(HDPathToString(path), seed)
-	if err != nil {
-		return nil, err
+	if kp.KeyType == typeLedger {
+		return pubkeyFromLedger(path)
+	} else if kp.KeyType == typeSoftware {
+		key, err := smbip32.Derive(HDPathToString(path), seed)
+		if err != nil {
+			return nil, err
+		}
+		return &EDKeyPair{
+			DisplayName: fmt.Sprintf("Child Key %d", childIdx),
+			Created:     common.NowTimeString(),
+			Private:     key[:],
+			Public:      PublicKey(ed25519.PrivateKey(key[:]).Public().(ed25519.PublicKey)),
+			Path:        path,
+		}, nil
+	} else {
+		return nil, fmt.Errorf("unknown key type")
 	}
+}
+
+func NewMasterKeyPairFromLedger() (*EDKeyPair, error) {
+	return pubkeyFromLedger(DefaultPath())
+}
+
+func pubkeyFromLedger(path HDPath) (*EDKeyPair, error) {
+	// TODO: support multiple ledger devices (https://github.com/spacemeshos/smcli/issues/46)
+	key, err := ledger.ReadPubkeyFromLedger("", HDPathToString(path), true)
+	if err != nil {
+		return nil, fmt.Errorf("error reading pubkey from ledger. Are you sure it's connected, unlocked, and the Spacemesh app is open? err: %w", err)
+	}
+
 	return &EDKeyPair{
-		DisplayName: fmt.Sprintf("Child Key %d", childIdx),
+		DisplayName: "Master Ledger Key",
 		Created:     common.NowTimeString(),
-		Private:     key[:],
-		Public:      PublicKey(ed25519.PrivateKey(key[:]).Public().(ed25519.PublicKey)),
-		Path:        path,
+		// note: we do not set a Private key here (it lives on the device)
+		Public: key[:],
+		Path:   path,
 	}, nil
 }

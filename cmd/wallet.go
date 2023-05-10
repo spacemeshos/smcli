@@ -30,6 +30,12 @@ var (
 
 	// printBase58 indicates that keys should be printed in base58 format.
 	printBase58 bool
+
+	// printParent indicates that the parent key should be printed.
+	printParent bool
+
+	// useLedger indicates that the Ledger device should be used.
+	useLedger bool
 )
 
 // walletCmd represents the wallet command.
@@ -46,10 +52,14 @@ to quickly create a Cobra application.`,
 
 // createCmd represents the create command.
 var createCmd = &cobra.Command{
-	Use:   "create [numaccounts]",
-	Short: "Generate a new wallet file from a BIP-39-compatible mnemonic",
-	Long: `Create a new wallet file containing one or more accounts using a BIP-39-compatible mnemonic.
-You can choose to use an existing mnemonic or generate a new, random mnemonic.`,
+	Use:   "create [--ledger] [numaccounts]",
+	Short: "Generate a new wallet file from a BIP-39-compatible mnemonic or Ledger device",
+	Long: `Create a new wallet file containing one or more accounts using a BIP-39-compatible mnemonic
+or a Ledger hardware wallet. If using a mnemonic you can choose to use an existing mnemonic or generate
+a new, random mnemonic.
+
+Add --ledger to instead read the public key from a Ledger device. If using a Ledger device please make
+sure the device is connected, unlocked, and the Spacemesh app is open.`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// get the number of accounts to create
@@ -60,31 +70,41 @@ You can choose to use an existing mnemonic or generate a new, random mnemonic.`,
 			n = int(tmpN)
 		}
 
-		// get or generate the mnemonic
-		fmt.Print("Enter a BIP-39-compatible mnemonic (or leave blank to generate a new one): ")
-		text, err := password.Read(os.Stdin)
-		fmt.Println()
-		cobra.CheckErr(err)
-		fmt.Println("Note: This application does not yet support BIP-39-compatible optional passwords. Support will be added soon.")
-
-		// It's critical that we trim whitespace, including CRLF. Otherwise it will get included in the mnemonic.
-		text = strings.TrimSpace(text)
-
 		var w *wallet.Wallet
-		if text == "" {
-			w, err = wallet.NewMultiWalletRandomMnemonic(n)
+		var err error
+
+		// Short-circuit and check for a ledger device
+		if useLedger {
+			w, err = wallet.NewMultiWalletFromLedger(n)
 			cobra.CheckErr(err)
-			fmt.Println("\nThis is your mnemonic (seed phrase). Write it down and store it safely. It is the ONLY way to restore your wallet.")
-			fmt.Println("Neither Spacemesh nor anyone else can help you restore your wallet without this mnemonic.")
-			fmt.Println("\n***********************************\nSAVE THIS MNEMONIC IN A SAFE PLACE!\n***********************************")
-			fmt.Println()
-			fmt.Println(w.Mnemonic())
-			fmt.Println("\nPress enter when you have securely saved your mnemonic.")
-			_, _ = fmt.Scanln()
+			fmt.Println("Note that, when using a hardware wallet, the wallet file I'm about to produce won't " +
+				"contain any private keys or mnemonics, but you may still choose to encrypt it to protect privacy.")
 		} else {
-			// try to use as a mnemonic
-			w, err = wallet.NewMultiWalletFromMnemonic(text, n)
+			// get or generate the mnemonic
+			fmt.Print("Enter a BIP-39-compatible mnemonic (or leave blank to generate a new one): ")
+			text, err := password.Read(os.Stdin)
+			fmt.Println()
 			cobra.CheckErr(err)
+			fmt.Println("Note: This application does not yet support BIP-39-compatible optional passwords. Support will be added soon.")
+
+			// It's critical that we trim whitespace, including CRLF. Otherwise it will get included in the mnemonic.
+			text = strings.TrimSpace(text)
+
+			if text == "" {
+				w, err = wallet.NewMultiWalletRandomMnemonic(n)
+				cobra.CheckErr(err)
+				fmt.Println("\nThis is your mnemonic (seed phrase). Write it down and store it safely. It is the ONLY way to restore your wallet.")
+				fmt.Println("Neither Spacemesh nor anyone else can help you restore your wallet without this mnemonic.")
+				fmt.Println("\n***********************************\nSAVE THIS MNEMONIC IN A SAFE PLACE!\n***********************************")
+				fmt.Println()
+				fmt.Println(w.Mnemonic())
+				fmt.Println("\nPress enter when you have securely saved your mnemonic.")
+				_, _ = fmt.Scanln()
+			} else {
+				// try to use as a mnemonic
+				w, err = wallet.NewMultiWalletFromMnemonic(text, n)
+				cobra.CheckErr(err)
+			}
 		}
 
 		fmt.Print("Enter a secure password used to encrypt the wallet file (optional but strongly recommended): ")
@@ -125,7 +145,8 @@ var readCmd = &cobra.Command{
 successfully read and decrypted, whether the password to open the file is correct, etc.
 It prints the accounts from the wallet file. By default it does not print private keys.
 Add --private to print private keys. Add --full to print full keys. Add --base58 to print
-keys in base58 format rather than hexadecimal.`,
+keys in base58 format rather than hexadecimal. Add --parent to print parent key (and not
+only child keys).`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		walletFn := args[0]
@@ -201,36 +222,48 @@ keys in base58 format rather than hexadecimal.`,
 			})
 		}
 
-		// print the master keypair
-		master := w.Secrets.MasterKeypair
+		// set the encoder
 		encoder := hex.EncodeToString
 		if printBase58 {
 			encoder = base58.Encode
 		}
-		if master != nil {
-			if printPrivate {
-				t.AppendRow(table.Row{
-					encoder(master.Public),
-					encoder(master.Private),
-					master.Path.String(),
-					master.DisplayName,
-					master.Created,
-				})
-			} else {
-				t.AppendRow(table.Row{
-					encoder(master.Public),
-					master.Path.String(),
-					master.DisplayName,
-					master.Created,
-				})
+
+		privKeyEncoder := func(privKey []byte) string {
+			if privKey == nil {
+				return "(none)"
+			}
+			return encoder(privKey)
+		}
+
+		// print the master account
+		if printParent {
+			master := w.Secrets.MasterKeypair
+			if master != nil {
+				if printPrivate {
+					t.AppendRow(table.Row{
+						encoder(master.Public),
+						privKeyEncoder(master.Private),
+						master.Path.String(),
+						master.DisplayName,
+						master.Created,
+					})
+				} else {
+					t.AppendRow(table.Row{
+						encoder(master.Public),
+						master.Path.String(),
+						master.DisplayName,
+						master.Created,
+					})
+				}
 			}
 		}
 
+		// print child accounts
 		for _, a := range w.Secrets.Accounts {
 			if printPrivate {
 				t.AppendRow(table.Row{
 					encoder(a.Public),
-					encoder(a.Private),
+					privKeyEncoder(a.Private),
 					a.Path.String(),
 					a.DisplayName,
 					a.Created,
@@ -255,5 +288,7 @@ func init() {
 	readCmd.Flags().BoolVarP(&printPrivate, "private", "p", false, "Print private keys")
 	readCmd.Flags().BoolVarP(&printFull, "full", "f", false, "Print full keys (no abbreviation)")
 	readCmd.Flags().BoolVar(&printBase58, "base58", false, "Print keys in base58 (rather than hex)")
+	readCmd.Flags().BoolVar(&printParent, "parent", false, "Print parent key (not only child keys)")
 	readCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode")
+	createCmd.Flags().BoolVarP(&useLedger, "ledger", "l", false, "Create a wallet using a Ledger device")
 }
