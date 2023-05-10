@@ -80,7 +80,7 @@ func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
 func (kp *EDKeyPair) NewChildKeyPair(seed []byte, childIdx int) (*EDKeyPair, error) {
 	path := kp.Path.Extend(BIP44HardenedAccountIndex(uint32(childIdx)))
 	if kp.KeyType == typeLedger {
-		return pubkeyFromLedger(path)
+		return pubkeyFromLedger(path, false)
 	} else if kp.KeyType == typeSoftware {
 		key, err := smbip32.Derive(HDPathToString(path), seed)
 		if err != nil {
@@ -99,21 +99,29 @@ func (kp *EDKeyPair) NewChildKeyPair(seed []byte, childIdx int) (*EDKeyPair, err
 }
 
 func NewMasterKeyPairFromLedger() (*EDKeyPair, error) {
-	return pubkeyFromLedger(DefaultPath())
+	return pubkeyFromLedger(DefaultPath(), true)
 }
 
-func pubkeyFromLedger(path HDPath) (*EDKeyPair, error) {
+func pubkeyFromLedger(path HDPath, master bool) (*EDKeyPair, error) {
 	// TODO: support multiple ledger devices (https://github.com/spacemeshos/smcli/issues/46)
-	key, err := ledger.ReadPubkeyFromLedger("", HDPathToString(path), true)
+	// don't bother confirming the master key; we only want the user to have to confirm a single key,
+	// the one they really care about, which is the first child key.
+	key, err := ledger.ReadPubkeyFromLedger("", HDPathToString(path), !master)
 	if err != nil {
 		return nil, fmt.Errorf("error reading pubkey from ledger. Are you sure it's connected, unlocked, and the Spacemesh app is open? err: %w", err)
 	}
 
+	name := "Ledger Master Key"
+	if !master {
+		name = "Ledger Child Key"
+	}
+
 	return &EDKeyPair{
-		DisplayName: "Master Ledger Key",
+		DisplayName: name,
 		Created:     common.NowTimeString(),
 		// note: we do not set a Private key here (it lives on the device)
-		Public: key[:],
-		Path:   path,
+		Public:  key[:],
+		Path:    path,
+		KeyType: typeLedger,
 	}, nil
 }

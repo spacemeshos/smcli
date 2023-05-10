@@ -229,7 +229,7 @@ only child keys).`,
 		}
 
 		privKeyEncoder := func(privKey []byte) string {
-			if privKey == nil {
+			if len(privKey) == 0 {
 				return "(none)"
 			}
 			return encoder(privKey)
