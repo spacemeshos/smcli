@@ -6,7 +6,7 @@ DEPLOC := https://github.com/spacemeshos/$(DEPLIBNAME)/releases/download
 UNZIP_DEST := deps
 REAL_DEST := $(shell realpath .)/$(UNZIP_DEST)
 DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIBNAME).tar.gz
-EXTLDFLAGS := -L$(UNZIP_DEST) -led25519_bip32 -lspacemesh_remote_wallet
+STATICLDFLAGS := -L$(UNZIP_DEST) -led25519_bip32 -lspacemesh_remote_wallet
 
 # Detect operating system
 ifeq ($(OS),Windows_NT)
@@ -49,19 +49,18 @@ ifeq ($(GOOS),linux)
 	MACHINE = linux
 
 	# Linux specific settings
-	# We do a static build on Linux using musl toolchain
-	CPREFIX = CC=musl-gcc
-	LDFLAGS = -linkmode external -extldflags "-static $(EXTLDFLAGS)"
+	# We statically link our own libraries and dynamically link other required libraries
+	LDFLAGS = -linkmode external -extldflags "-Wl,-Bstatic $(STATICLDFLAGS) -Wl,-Bdynamic -ludev -lm"
 else ifeq ($(GOOS),darwin)
 	MACHINE = macos
 
 	# macOS specific settings
 	# dynamic build using default toolchain
-	LDFLAGS = -extldflags "$(EXTLDFLAGS)"
+	LDFLAGS = -extldflags "$(STATICLDFLAGS)"
 else ifeq ($(GOOS),windows)
 	# static build using default toolchain
 	# add a few extra required libs
-	LDFLAGS = -linkmode external -extldflags "-static $(EXTLDFLAGS) -lws2_32 -luserenv -lbcrypt"
+	LDFLAGS = -linkmode external -extldflags "-static $(STATICLDFLAGS) -lws2_32 -luserenv -lbcrypt"
 else
 	$(error Unknown operating system: $(GOOS))
 endif
@@ -114,14 +113,19 @@ tidy:
 
 .PHONY: build
 build: $(UNZIP_DEST)
-	$(CPREFIX) GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 go build -ldflags '$(LDFLAGS)'
+	CGO_CFLAGS="-I$(REAL_DEST)" \
+	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	GOOS=$(GOOS) \
+	GOARCH=$(GOARCH) \
+	CGO_ENABLED=1 \
+	go build -ldflags '$(LDFLAGS)'
 
 .PHONY: test
 test: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
 	CGO_LDFLAGS="-L$(REAL_DEST)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
-	go test -v -count 1 -ldflags "-extldflags \"$(EXTLDFLAGS)\"" ./...
+	go test -v -count 1 -ldflags "-extldflags \"$(STATICLDFLAGS)\"" ./...
 
 .PHONY: test-tidy
 test-tidy:
