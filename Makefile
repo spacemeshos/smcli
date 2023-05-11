@@ -103,6 +103,7 @@ $(DOWNLOAD_DEST):
 .PHONY: install
 install:
 	go mod download
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.52.0
 	go install gotest.tools/gotestsum@v1.9.0
 	go install honnef.co/go/tools/cmd/staticcheck@v0.3.3
 
@@ -143,15 +144,24 @@ test-fmt:
 
 .PHONY: lint
 lint:
+	CGO_CFLAGS="-I$(REAL_DEST)" \
+	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	LD_LIBRARY_PATH=$(REAL_DEST) \
 	./bin/golangci-lint run --config .golangci.yml
 
 # Auto-fixes golangci-lint issues where possible.
 .PHONY: lint-fix
 lint-fix:
+	CGO_CFLAGS="-I$(REAL_DEST)" \
+	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	LD_LIBRARY_PATH=$(REAL_DEST) \
 	./bin/golangci-lint run --config .golangci.yml --fix
 
 .PHONY: lint-github-action
 lint-github-action:
+	CGO_CFLAGS="-I$(REAL_DEST)" \
+	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	LD_LIBRARY_PATH=$(REAL_DEST) \
 	./bin/golangci-lint run --config .golangci.yml --out-format=github-actions
 
 .PHONY: staticcheck

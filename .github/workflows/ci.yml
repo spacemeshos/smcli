@@ -39,8 +39,10 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.go-version }}
+      - name: setup env
+        run: make install
       - name: lint
-        uses: golangci/golangci-lint-action@v3
+        run: make lint-github-action
 
   build:
     runs-on: ubuntu-latest
