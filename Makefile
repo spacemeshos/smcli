@@ -103,7 +103,6 @@ $(DOWNLOAD_DEST):
 .PHONY: install
 install:
 	go mod download
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.52.0
 	go install gotest.tools/gotestsum@v1.9.0
 	go install honnef.co/go/tools/cmd/staticcheck@v0.3.3
 
@@ -157,6 +156,9 @@ lint-github-action:
 
 .PHONY: staticcheck
 staticcheck: 
+	CGO_CFLAGS="-I$(REAL_DEST)" \
+	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	LD_LIBRARY_PATH=$(REAL_DEST) \
 	staticcheck ./...
 
 clean:
