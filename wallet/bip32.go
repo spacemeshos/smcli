@@ -79,9 +79,10 @@ func NewMasterKeyPair(seed []byte) (*EDKeyPair, error) {
 
 func (kp *EDKeyPair) NewChildKeyPair(seed []byte, childIdx int) (*EDKeyPair, error) {
 	path := kp.Path.Extend(BIP44HardenedAccountIndex(uint32(childIdx)))
-	if kp.KeyType == typeLedger {
+	switch kp.KeyType {
+	case typeLedger:
 		return pubkeyFromLedger(path, false)
-	} else if kp.KeyType == typeSoftware {
+	case typeSoftware:
 		key, err := smbip32.Derive(HDPathToString(path), seed)
 		if err != nil {
 			return nil, err
@@ -90,10 +91,10 @@ func (kp *EDKeyPair) NewChildKeyPair(seed []byte, childIdx int) (*EDKeyPair, err
 			DisplayName: fmt.Sprintf("Child Key %d", childIdx),
 			Created:     common.NowTimeString(),
 			Private:     key[:],
-			Public:      PublicKey(ed25519.PrivateKey(key[:]).Public().(ed25519.PublicKey)),
+			Public:      PublicKey(ed25519.PrivateKey(key).Public().(ed25519.PublicKey)),
 			Path:        path,
 		}, nil
-	} else {
+	default:
 		return nil, fmt.Errorf("unknown key type")
 	}
 }
