@@ -185,8 +185,8 @@ github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFR
 github.com/rogpeppe/go-internal v1.9.0 h1:73kH8U+JUqXU8lRuOHeVHaa/SZPifC7BkcraZVejAe8=
 github.com/rogpeppe/go-internal v1.9.0/go.mod h1:WtVeX8xhTBvf0smdhujwtBcq4Qrzq/fJaraNFVN+nFs=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
-github.com/spacemeshos/smkeys v1.0.3-0.20230511190607-5b2cfe71b4ba h1:r3HTtml9uDAdpqiZDbZcIO/Xt1w+kjHE8QHe2wudrVk=
-github.com/spacemeshos/smkeys v1.0.3-0.20230511190607-5b2cfe71b4ba/go.mod h1:gj9yv0Zek5D9p6zWmVV/2d0WdhPwyKXDMQm2MpmxIow=
+github.com/spacemeshos/smkeys v1.0.3 h1:v1O8NgRtSTCMBClvBM/MqxWJ35moKYURadFDwZRQki4=
+github.com/spacemeshos/smkeys v1.0.3/go.mod h1:gj9yv0Zek5D9p6zWmVV/2d0WdhPwyKXDMQm2MpmxIow=
 github.com/spf13/afero v1.9.5 h1:stMpOSZFs//0Lv29HduCmli3GUfpFoF3Y1Q/aXj/wVM=
 github.com/spf13/afero v1.9.5/go.mod h1:UBogFpq8E9Hx+xc5CNTTEpTnuHVmXDwZcZcE1eb/UhQ=
 github.com/spf13/cast v1.5.0 h1:rj3WzYc11XZaIZMPKmwP96zkFEnnAmV8s6XbB2aY32w=
