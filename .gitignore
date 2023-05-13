@@ -23,3 +23,6 @@ deps/
 go.work
 
 .idea
+
+# Default build artifact
+smcli
