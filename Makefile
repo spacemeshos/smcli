@@ -7,6 +7,7 @@ UNZIP_DEST := deps
 REAL_DEST := $(shell realpath .)/$(UNZIP_DEST)
 DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIBNAME).tar.gz
 STATICLDFLAGS := -L$(UNZIP_DEST) -led25519_bip32 -lspacemesh_remote_wallet
+EXTRACT = tar -xzf
 
 # Detect operating system
 ifeq ($(OS),Windows_NT)
@@ -67,22 +68,9 @@ endif
 
 ifeq ($(SYSTEM),windows)
 	# Windows settings
-	# TODO: this is probably unnecessary, most Windows dev environments (including GHA)
-	# should support bash
-	RM = del /Q /F
-	RMDIR = rmdir /S /Q
-	MKDIR = mkdir
-
-	FN = $(DEPLIBNAME)_windows-amd64.tar.gz
-	DOWNLOAD_DEST = $(UNZIP_DEST)/$(DEPLIBNAME).zip
-	EXTRACT = 7z x -y
+	PLATFORM = windows-amd64
 else
 	# Linux and macOS settings
-	RM = rm -f
-	RMDIR = rm -rf
-	MKDIR = mkdir -p
-	EXTRACT = tar -xzf
-
 	ifeq ($(GOARCH),amd64)
 		PLATFORM = $(MACHINE)-amd64
 	else ifeq ($(GOARCH),arm64)
@@ -90,14 +78,14 @@ else
 	else
 		$(error Unknown processor architecture: $(GOARCH))
 	endif
-	FN = $(DEPLIBNAME)_$(PLATFORM).tar.gz
 endif
+FN = $(DEPLIBNAME)_$(PLATFORM).tar.gz
 
 $(UNZIP_DEST): $(DOWNLOAD_DEST)
 	cd $(UNZIP_DEST) && $(EXTRACT) ../$(DOWNLOAD_DEST)
 
 $(DOWNLOAD_DEST):
-	$(MKDIR) $(UNZIP_DEST)
+	mkdir -p $(UNZIP_DEST)
 	curl -sSfL $(DEPLOC)/v$(DEPTAG)/$(FN) -o $(DOWNLOAD_DEST)
 
 .PHONY: install
@@ -143,7 +131,7 @@ test-fmt:
 	git diff --exit-code || (git --no-pager diff && git checkout . && exit 1)
 
 .PHONY: lint
-lint:
+lint: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
 	CGO_LDFLAGS="-L$(REAL_DEST)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
@@ -151,14 +139,14 @@ lint:
 
 # Auto-fixes golangci-lint issues where possible.
 .PHONY: lint-fix
-lint-fix:
+lint-fix: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
 	CGO_LDFLAGS="-L$(REAL_DEST)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	./bin/golangci-lint run --config .golangci.yml --fix
 
 .PHONY: lint-github-action
-lint-github-action:
+lint-github-action: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
 	CGO_LDFLAGS="-L$(REAL_DEST)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
@@ -172,5 +160,4 @@ staticcheck: $(UNZIP_DEST)
 	staticcheck ./...
 
 clean:
-	$(RM) $(DOWNLOAD_DEST)
-	$(RMDIR) $(UNZIP_DEST)
+	rm -rf $(UNZIP_DEST)
