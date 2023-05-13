@@ -3,15 +3,15 @@ name: Build and Release
 env:
   go-version: "1.19"
 
-on:
-  release:
-    types: [created]
+on: push
+#  release:
+#    types: [created]
 
 jobs:
   release:
     strategy:
       matrix:
-        # build and publish in parallel: linux/amd64, linux/arm64, windows/amd64, darwin/amd64, darwin/arm64
+        # build and publish in parallel
         include:
           - image: macos-latest
             name: macos-amd64
@@ -47,7 +47,6 @@ jobs:
       run: make build
     - name: Prepare files
       shell: bash
-      # if: ${{ !contains(matrix.name, 'windows') }}
       run: |
         mkdir artifacts
         mv LICENSE README.md ${{ env.BINARY_NAME }} artifacts
@@ -58,3 +57,4 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         files: ${{ env.ARTIFACT_NAME }}
+        tag_name: v1.0.5
