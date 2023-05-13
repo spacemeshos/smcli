@@ -36,13 +36,10 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.go-version }}
-    - name: Install musl
-      # only run on GH-hosted runner; self-hosted runner already has the package
+    - name: Install required packages
+      # only run on GH-hosted runner; self-hosted runner already has these
       if: matrix.name == 'linux-amd64'
-      uses: awalsh128/cache-apt-pkgs-action@v1
-      with:
-        packages: musl-tools # provides musl-gcc
-        version: 1.0
+      run: sudo apt-get install -y libudev-dev
     - name: Build
       run: make build
     - name: Prepare files
