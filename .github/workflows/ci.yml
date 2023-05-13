@@ -23,6 +23,7 @@ jobs:
           go-version: ${{ env.go-version }}
       - name: fmt, tidy
         run: |
+          make install
           make test-fmt
           make test-tidy
       - name: staticcheck
@@ -39,7 +40,9 @@ jobs:
         with:
           go-version: ${{ env.go-version }}
       - name: lint
-        run: make lint-github-action
+        run: |
+          make install
+          make lint-github-action
 
   build:
     runs-on: ubuntu-latest

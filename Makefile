@@ -101,7 +101,7 @@ $(DOWNLOAD_DEST):
 	curl -sSfL $(DEPLOC)/v$(DEPTAG)/$(FN) -o $(DOWNLOAD_DEST)
 
 .PHONY: install
-install: $(UNZIP_DEST)
+install:
 	go mod download
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.52.0
 	go install gotest.tools/gotestsum@v1.9.0
@@ -128,7 +128,7 @@ test: $(UNZIP_DEST)
 	go test -v -count 1 -ldflags "-extldflags \"$(STATICLDFLAGS)\"" ./...
 
 .PHONY: test-tidy
-test-tidy: install
+test-tidy:
 	# Working directory must be clean, or this test would be destructive
 	git diff --quiet || (echo "\033[0;31mWorking directory not clean!\033[0m" && git --no-pager diff && exit 1)
 	# We expect `go mod tidy` not to change anything, the test should fail otherwise
@@ -136,14 +136,14 @@ test-tidy: install
 	git diff --exit-code || (git --no-pager diff && git checkout . && exit 1)
 
 .PHONY: test-fmt
-test-fmt: install
+test-fmt:
 	git diff --quiet || (echo "\033[0;31mWorking directory not clean!\033[0m" && git --no-pager diff && exit 1)
 	# We expect `go fmt` not to change anything, the test should fail otherwise
 	go fmt ./...
 	git diff --exit-code || (git --no-pager diff && git checkout . && exit 1)
 
 .PHONY: lint
-lint: install
+lint:
 	CGO_CFLAGS="-I$(REAL_DEST)" \
 	CGO_LDFLAGS="-L$(REAL_DEST)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
@@ -151,14 +151,14 @@ lint: install
 
 # Auto-fixes golangci-lint issues where possible.
 .PHONY: lint-fix
-lint-fix: install
+lint-fix:
 	CGO_CFLAGS="-I$(REAL_DEST)" \
 	CGO_LDFLAGS="-L$(REAL_DEST)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	./bin/golangci-lint run --config .golangci.yml --fix
 
 .PHONY: lint-github-action
-lint-github-action: install
+lint-github-action:
 	CGO_CFLAGS="-I$(REAL_DEST)" \
 	CGO_LDFLAGS="-L$(REAL_DEST)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
