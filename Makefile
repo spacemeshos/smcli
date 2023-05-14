@@ -6,6 +6,9 @@ DEPLOC := https://github.com/spacemeshos/$(DEPLIBNAME)/releases/download
 UNZIP_DEST := deps
 REAL_DEST := $(shell realpath .)/$(UNZIP_DEST)
 DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIBNAME).tar.gz
+
+LINKLIBS := -L$(REAL_DEST)
+CGO_LDFLAGS := $(LINKLIBS)
 STATICLDFLAGS := -L$(UNZIP_DEST) -led25519_bip32 -lspacemesh_remote_wallet
 EXTRACT = tar -xzf
 
@@ -51,17 +54,18 @@ ifeq ($(GOOS),linux)
 
 	# Linux specific settings
 	# We statically link our own libraries and dynamically link other required libraries
-	LDFLAGS = -linkmode external -extldflags "-Wl,-Bstatic $(STATICLDFLAGS) -Wl,-Bdynamic -ludev -lm"
+	LDFLAGS = -ldflags '-linkmode external -extldflags "-Wl,-Bstatic $(STATICLDFLAGS) -Wl,-Bdynamic -ludev -lm"'
 else ifeq ($(GOOS),darwin)
 	MACHINE = macos
 
 	# macOS specific settings
-	# dynamic build using default toolchain
-	LDFLAGS = -extldflags "$(STATICLDFLAGS)"
+	# statically link our libs, dynamic build using default toolchain
+	CGO_LDFLAGS = $(LINKLIBS) $(REAL_DEST)/libed25519_bip32.a $(REAL_DEST)/libspacemesh_remote_wallet.a -framework CoreFoundation -framework IOKit -framework AppKit
+	LDFLAGS =
 else ifeq ($(GOOS),windows)
 	# static build using default toolchain
 	# add a few extra required libs
-	LDFLAGS = -linkmode external -extldflags "-static $(STATICLDFLAGS) -lws2_32 -luserenv -lbcrypt"
+	LDFLAGS = -ldflags '-linkmode external -extldflags "-static $(STATICLDFLAGS) -lws2_32 -luserenv -lbcrypt"'
 else
 	$(error Unknown operating system: $(GOOS))
 endif
@@ -102,16 +106,16 @@ tidy:
 .PHONY: build
 build: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	GOOS=$(GOOS) \
 	GOARCH=$(GOARCH) \
 	CGO_ENABLED=1 \
-	go build -ldflags '$(LDFLAGS)'
+	go build $(LDFLAGS)
 
 .PHONY: test
 test: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	go test -v -count 1 -ldflags "-extldflags \"$(STATICLDFLAGS)\"" ./...
 
@@ -133,7 +137,7 @@ test-fmt:
 .PHONY: lint
 lint: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	./bin/golangci-lint run --config .golangci.yml
 
@@ -141,21 +145,21 @@ lint: $(UNZIP_DEST)
 .PHONY: lint-fix
 lint-fix: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	./bin/golangci-lint run --config .golangci.yml --fix
 
 .PHONY: lint-github-action
 lint-github-action: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	./bin/golangci-lint run --config .golangci.yml --out-format=github-actions
 
 .PHONY: staticcheck
 staticcheck: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	staticcheck ./...
 
