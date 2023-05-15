@@ -4,9 +4,13 @@ DEPTAG := 0.0.1
 DEPLIBNAME := spacemesh-sdk
 DEPLOC := https://github.com/spacemeshos/$(DEPLIBNAME)/releases/download
 UNZIP_DEST := deps
-REAL_DEST := $(shell realpath .)/$(UNZIP_DEST)
+REAL_DEST := $(CURDIR)/$(UNZIP_DEST)
 DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIBNAME).tar.gz
+
+LINKLIBS := -L$(REAL_DEST)
+CGO_LDFLAGS := $(LINKLIBS)
 STATICLDFLAGS := -L$(UNZIP_DEST) -led25519_bip32 -lspacemesh_remote_wallet
+EXTRACT = tar -xzf
 
 # Detect operating system
 ifeq ($(OS),Windows_NT)
@@ -50,39 +54,27 @@ ifeq ($(GOOS),linux)
 
 	# Linux specific settings
 	# We statically link our own libraries and dynamically link other required libraries
-	LDFLAGS = -linkmode external -extldflags "-Wl,-Bstatic $(STATICLDFLAGS) -Wl,-Bdynamic -ludev -lm"
+	LDFLAGS = -ldflags '-linkmode external -extldflags "-Wl,-Bstatic $(STATICLDFLAGS) -Wl,-Bdynamic -ludev -lm"'
 else ifeq ($(GOOS),darwin)
 	MACHINE = macos
 
 	# macOS specific settings
-	# dynamic build using default toolchain
-	LDFLAGS = -extldflags "$(STATICLDFLAGS)"
+	# statically link our libs, dynamic build using default toolchain
+	CGO_LDFLAGS = $(LINKLIBS) $(REAL_DEST)/libed25519_bip32.a $(REAL_DEST)/libspacemesh_remote_wallet.a -framework CoreFoundation -framework IOKit -framework AppKit
+	LDFLAGS =
 else ifeq ($(GOOS),windows)
 	# static build using default toolchain
 	# add a few extra required libs
-	LDFLAGS = -linkmode external -extldflags "-static $(STATICLDFLAGS) -lws2_32 -luserenv -lbcrypt"
+	LDFLAGS = -ldflags '-linkmode external -extldflags "-static $(STATICLDFLAGS) -lws2_32 -luserenv -lbcrypt"'
 else
 	$(error Unknown operating system: $(GOOS))
 endif
 
 ifeq ($(SYSTEM),windows)
 	# Windows settings
-	# TODO: this is probably unnecessary, most Windows dev environments (including GHA)
-	# should support bash
-	RM = del /Q /F
-	RMDIR = rmdir /S /Q
-	MKDIR = mkdir
-
-	FN = $(DEPLIBNAME)_windows-amd64.tar.gz
-	DOWNLOAD_DEST = $(UNZIP_DEST)/$(DEPLIBNAME).zip
-	EXTRACT = 7z x -y
+	PLATFORM = windows-amd64
 else
 	# Linux and macOS settings
-	RM = rm -f
-	RMDIR = rm -rf
-	MKDIR = mkdir -p
-	EXTRACT = tar -xzf
-
 	ifeq ($(GOARCH),amd64)
 		PLATFORM = $(MACHINE)-amd64
 	else ifeq ($(GOARCH),arm64)
@@ -90,14 +82,14 @@ else
 	else
 		$(error Unknown processor architecture: $(GOARCH))
 	endif
-	FN = $(DEPLIBNAME)_$(PLATFORM).tar.gz
 endif
+FN = $(DEPLIBNAME)_$(PLATFORM).tar.gz
 
 $(UNZIP_DEST): $(DOWNLOAD_DEST)
 	cd $(UNZIP_DEST) && $(EXTRACT) ../$(DOWNLOAD_DEST)
 
 $(DOWNLOAD_DEST):
-	$(MKDIR) $(UNZIP_DEST)
+	mkdir -p $(UNZIP_DEST)
 	curl -sSfL $(DEPLOC)/v$(DEPTAG)/$(FN) -o $(DOWNLOAD_DEST)
 
 .PHONY: install
@@ -114,16 +106,16 @@ tidy:
 .PHONY: build
 build: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	GOOS=$(GOOS) \
 	GOARCH=$(GOARCH) \
 	CGO_ENABLED=1 \
-	go build -ldflags '$(LDFLAGS)'
+	go build $(LDFLAGS)
 
 .PHONY: test
 test: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	go test -v -count 1 -ldflags "-extldflags \"$(STATICLDFLAGS)\"" ./...
 
@@ -143,34 +135,33 @@ test-fmt:
 	git diff --exit-code || (git --no-pager diff && git checkout . && exit 1)
 
 .PHONY: lint
-lint:
+lint: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	./bin/golangci-lint run --config .golangci.yml
 
 # Auto-fixes golangci-lint issues where possible.
 .PHONY: lint-fix
-lint-fix:
+lint-fix: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	./bin/golangci-lint run --config .golangci.yml --fix
 
 .PHONY: lint-github-action
-lint-github-action:
+lint-github-action: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	./bin/golangci-lint run --config .golangci.yml --out-format=github-actions
 
 .PHONY: staticcheck
 staticcheck: $(UNZIP_DEST)
 	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="-L$(REAL_DEST)" \
+	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	staticcheck ./...
 
 clean:
-	$(RM) $(DOWNLOAD_DEST)
-	$(RMDIR) $(UNZIP_DEST)
+	rm -rf $(UNZIP_DEST)
