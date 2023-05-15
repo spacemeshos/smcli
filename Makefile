@@ -4,7 +4,7 @@ DEPTAG := 0.0.1
 DEPLIBNAME := spacemesh-sdk
 DEPLOC := https://github.com/spacemeshos/$(DEPLIBNAME)/releases/download
 UNZIP_DEST := deps
-REAL_DEST := $(PWD)/$(UNZIP_DEST)
+REAL_DEST := $(CURDIR)/$(UNZIP_DEST)
 DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIBNAME).tar.gz
 
 LINKLIBS := -L$(REAL_DEST)
