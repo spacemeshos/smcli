@@ -43,3 +43,7 @@ smcli wallet create --ledger
 Note that the created wallet file will not contain any private keys or mnemonic (as these obviously remain on the Ledger device). If you subsequently use `smcli wallet read` to read the file, these will not be printed. We still recommend encrypting the wallet file with a secure password for privacy purposes.
 
 **NOTE: We strongly recommend only creating a new wallet on a hardware wallet or on a secure, airgapped computer. You are responsible for safely storing your mnemonic and wallet files. Your mnemonic is the ONLY way to restore access to your wallet and accounts if you misplace the wallet file, so it's essential that you back it up securely and reliably. There is absolutely nothing that we can do to help you recover your wallet if you misplace the file or mnemonic.**
+
+## Building
+
+Building the app is fairly straightforward. The only prerequisites are Golang with CGO support, `libudev` on Linux (`sudo apt-get install libudev-dev` on Debian/Ubuntu) and two libraries that will be statically linked into the binary. All of the details are handled in `Makefile` and should work on Linux (AMD64 and ARM64), macOS (Intel and Apple Silicon), and Windows. Simply run `make build`, which should download the correct libraries for your OS and platform. See the [release CI workflow](https://github.com/spacemeshos/smcli/blob/develop/.github/workflows/release.yml) for more details, and feel free to open an issue if you encounter any trouble.
