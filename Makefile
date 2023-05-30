@@ -8,7 +8,8 @@ REAL_DEST := $(CURDIR)/$(UNZIP_DEST)
 DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIBNAME).tar.gz
 
 LINKLIBS := -L$(REAL_DEST)
-CGO_LDFLAGS := $(LINKLIBS) -Wl,-rpath,@loader_path -Wl,-rpath,$(REAL_DEST)
+RPATH := -Wl,-rpath,@loader_path -Wl,-rpath,$(REAL_DEST)
+CGO_LDFLAGS := $(LINKLIBS) $(RPATH)
 STATICLDFLAGS := -L$(UNZIP_DEST) -led25519_bip32 -lspacemesh_remote_wallet
 EXTRACT = tar -xzf
 
@@ -60,7 +61,7 @@ else ifeq ($(GOOS),darwin)
 
 	# macOS specific settings
 	# statically link our libs, dynamic build using default toolchain
-	CGO_LDFLAGS = $(LINKLIBS) $(REAL_DEST)/libed25519_bip32.a $(REAL_DEST)/libspacemesh_remote_wallet.a -framework CoreFoundation -framework IOKit -framework AppKit
+	CGO_LDFLAGS = $(LINKLIBS) $(REAL_DEST)/libed25519_bip32.a $(REAL_DEST)/libspacemesh_remote_wallet.a -framework CoreFoundation -framework IOKit -framework AppKit $(RPATH)
 	LDFLAGS =
 else ifeq ($(GOOS),windows)
 	# static build using default toolchain
