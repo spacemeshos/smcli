@@ -1,6 +1,6 @@
 # Based on https://gist.github.com/trosendal/d4646812a43920bfe94e
 
-DEPTAG := 0.0.1
+DEPTAG := 1.0.3
 DEPLIBNAME := spacemesh-sdk
 DEPLOC := https://github.com/spacemeshos/$(DEPLIBNAME)/releases/download
 UNZIP_DEST := deps
@@ -8,7 +8,7 @@ REAL_DEST := $(CURDIR)/$(UNZIP_DEST)
 DOWNLOAD_DEST := $(UNZIP_DEST)/$(DEPLIBNAME).tar.gz
 
 LINKLIBS := -L$(REAL_DEST)
-CGO_LDFLAGS := $(LINKLIBS)
+CGO_LDFLAGS := $(LINKLIBS) -Wl,-rpath,@loader_path -Wl,-rpath,$(REAL_DEST)
 STATICLDFLAGS := -L$(UNZIP_DEST) -led25519_bip32 -lspacemesh_remote_wallet
 EXTRACT = tar -xzf
 
