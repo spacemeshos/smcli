@@ -12,9 +12,7 @@ import (
 	"github.com/spacemeshos/smcli/common"
 )
 
-var (
-	errWhitespace = fmt.Errorf("whitespace violation in mnemonic phrase")
-)
+var errWhitespace = fmt.Errorf("whitespace violation in mnemonic phrase")
 
 // Wallet is the basic data structure.
 type Wallet struct {
