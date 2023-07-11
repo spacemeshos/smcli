@@ -12,6 +12,10 @@ import (
 	"github.com/spacemeshos/smcli/common"
 )
 
+var (
+	errWhitespace = fmt.Errorf("whitespace violation in mnemonic phrase")
+)
+
 // Wallet is the basic data structure.
 type Wallet struct {
 	// keystore string
@@ -94,9 +98,8 @@ func NewMultiWalletFromMnemonic(m string, n int) (*Wallet, error) {
 	}
 
 	// bip39 lib doesn't properly validate whitespace so we have to do that manually.
-	expected := strings.Join(strings.Fields(m), " ")
-	if m != expected {
-		return nil, fmt.Errorf("whitespace violation in mnemonic phrase")
+	if expected := strings.Join(strings.Fields(m), " "); m != expected {
+		return nil, errWhitespace
 	}
 
 	// this checks the number of words and the checksum.

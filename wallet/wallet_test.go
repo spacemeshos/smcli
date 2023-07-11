@@ -101,3 +101,19 @@ func TestKeysInWalletMaintainExpectedPath(t *testing.T) {
 		require.Equal(t, expectedPath, HDPathToString(path))
 	}
 }
+
+func TestMnemonicWhitespace(t *testing.T) {
+	mnemonics := []string{
+		"film  theme cheese broken kingdom destroy inch ready wear inspire shove pudding",
+		"film theme cheese broken kingdom destroy inch ready wear  inspire shove pudding",
+		"film theme cheese broken kingdom destroy inch ready wear\ninspire shove pudding",
+		"film theme cheese broken kingdom destroy inch ready wear inspire shove pudding\t",
+		" film theme cheese broken kingdom destroy inch ready wear inspire shove pudding",
+		"film theme cheese broken kingdom destroy inch ready wear inspire shove pudding ",
+		"film  theme  cheese  broken  kingdom  destroy  inch  ready  wear  inspire  shove  pudding",
+	}
+	for _, m := range mnemonics {
+		_, err := NewMultiWalletFromMnemonic(m, 1)
+		require.Equal(t, errWhitespace, err, "expected whitespace error in mnemonic")
+	}
+}
