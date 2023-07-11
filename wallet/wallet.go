@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/tyler-smith/go-bip39"
 
@@ -91,11 +92,21 @@ func NewMultiWalletFromMnemonic(m string, n int) (*Wallet, error) {
 	if n < 0 || n > common.MaxAccountsPerWallet {
 		return nil, fmt.Errorf("invalid number of accounts")
 	}
+
+	// bip39 lib doesn't properly validate whitespace so we have to do that manually.
+	expected := strings.Join(strings.Fields(m), " ")
+	if m != expected {
+		return nil, fmt.Errorf("whitespace violation in mnemonic phrase")
+	}
+
+	// this checks the number of words and the checksum.
 	if !bip39.IsMnemonicValid(m) {
 		return nil, fmt.Errorf("invalid mnemonic")
 	}
+
 	// TODO: add option for user to provide passphrase
 	// https://github.com/spacemeshos/smcli/issues/18
+
 	seed := bip39.NewSeed(m, "")
 	masterKeyPair, err := NewMasterKeyPair(seed)
 	if err != nil {
