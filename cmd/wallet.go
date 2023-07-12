@@ -12,8 +12,10 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/spf13/cobra"
 
+	"github.com/spacemeshos/smcli/cmd/internal"
 	"github.com/spacemeshos/smcli/common"
 	"github.com/spacemeshos/smcli/wallet"
 )
@@ -281,14 +283,51 @@ only child keys).`,
 	},
 }
 
+var addrCmd = &cobra.Command{
+	Use:                   "address [wallet file] [--parent]",
+	DisableFlagsInUseLine: true,
+	Short:                 "Show wallet addresses",
+	Long:                  "Show the addresses associated with the given wallet",
+	Args:                  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		w, err := internal.LoadWallet(args[0], debug)
+		cobra.CheckErr(err)
+
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		t.SetTitle("Wallet Addresses")
+		t.AppendHeader(table.Row{"address", "name"})
+
+		if printParent {
+			if master := w.Secrets.MasterKeypair; master != nil {
+				t.AppendRow(table.Row{
+					types.GenerateAddress(master.Public).String(),
+					master.DisplayName,
+				})
+			}
+		}
+
+		for _, account := range w.Secrets.Accounts {
+			t.AppendRow(table.Row{
+				types.GenerateAddress(account.Public).String(),
+				account.DisplayName,
+			})
+		}
+
+		t.Render()
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(walletCmd)
 	walletCmd.AddCommand(createCmd)
 	walletCmd.AddCommand(readCmd)
+	walletCmd.AddCommand(addrCmd)
 	readCmd.Flags().BoolVarP(&printPrivate, "private", "p", false, "Print private keys")
 	readCmd.Flags().BoolVarP(&printFull, "full", "f", false, "Print full keys (no abbreviation)")
 	readCmd.Flags().BoolVar(&printBase58, "base58", false, "Print keys in base58 (rather than hex)")
 	readCmd.Flags().BoolVar(&printParent, "parent", false, "Print parent key (not only child keys)")
 	readCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode")
 	createCmd.Flags().BoolVarP(&useLedger, "ledger", "l", false, "Create a wallet using a Ledger device")
+	addrCmd.Flags().BoolVar(&printParent, "parent", false, "Print parent address (not only child addresses)")
 }
