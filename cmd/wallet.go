@@ -108,10 +108,22 @@ sure the device is connected, unlocked, and the Spacemesh app is open.`,
 		}
 
 		fmt.Print("Enter a secure password used to encrypt the wallet file (optional but strongly recommended): ")
-		password, err := password.Read(os.Stdin)
+		pass, err := password.Read(os.Stdin)
 		fmt.Println()
 		cobra.CheckErr(err)
-		wk := wallet.NewKey(wallet.WithRandomSalt(), wallet.WithPbkdf2Password([]byte(password)))
+
+		if pass != "" {
+			fmt.Print("Confirm your password: ")
+			confirm, err := password.Read(os.Stdin)
+			fmt.Println()
+			cobra.CheckErr(err)
+
+			if pass != confirm {
+				log.Fatalln("Error: Passwords do not match.")
+			}
+		}
+
+		wk := wallet.NewKey(wallet.WithRandomSalt(), wallet.WithPbkdf2Password([]byte(pass)))
 		err = os.MkdirAll(common.DotDirectory(), 0o700)
 		cobra.CheckErr(err)
 
