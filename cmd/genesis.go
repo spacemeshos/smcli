@@ -50,7 +50,7 @@ var verifyCmd = &cobra.Command{
 			key := [ed25519.PublicKeySize]byte{}
 			copy(key[:], keyBytes)
 			keys = append(keys, key)
-			fmt.Printf("> ")
+			fmt.Printf("[enter next key or just press enter to end] > ")
 		}
 		if len(keys) == 0 {
 			log.Fatalln("Error: must enter at least one key")
