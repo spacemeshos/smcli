@@ -14,11 +14,11 @@ var cfgFile string
 
 // rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
-	Use:   "sm",
+	Use:   "smcli",
 	Short: "The official CLI for Spacemesh.",
-	Long: `sm is your terminal's connection to the Spacemesh network.
+	Long: `smcli is your terminal's connection to the Spacemesh network.
 
-The sm CLI provides an ergonomic set of tools for managing a node and wallet.`,
+This tool provides an ergonomic set of tools for managing a wallet.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) {
