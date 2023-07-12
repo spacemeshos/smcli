@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/btcsuite/btcutil/base58"
+	"github.com/cosmos/btcutil/bech32"
 	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spacemeshos/go-spacemesh/common/types"
@@ -32,6 +33,9 @@ var (
 
 	// printBase58 indicates that keys should be printed in base58 format.
 	printBase58 bool
+
+	// printHex indicates that keys should be printed in Hex format.
+	printHex bool
 
 	// printParent indicates that the parent key should be printed.
 	printParent bool
@@ -141,34 +145,22 @@ sure the device is connected, unlocked, and the Spacemesh app is open.`,
 
 // readCmd reads an existing wallet file.
 var readCmd = &cobra.Command{
-	Use:   "read [wallet file] [--full/-f] [--private/-p] [--base58]",
-	Short: "Reads an existing wallet file",
+	Use:                   "read [wallet file] [--full/-f] [--private/-p] [--parent] [--base58] [--hex]",
+	DisableFlagsInUseLine: true,
+	Short:                 "Reads an existing wallet file",
 	Long: `This command can be used to verify whether an existing wallet file can be
 successfully read and decrypted, whether the password to open the file is correct, etc.
 It prints the accounts from the wallet file. By default it does not print private keys.
 Add --private to print private keys. Add --full to print full keys. Add --base58 to print
-keys in base58 format rather than hexadecimal. Add --parent to print parent key (and not
+keys in base58 format or --hex for hexdecimal rather than bech32. Add --parent to print parent key (and not
 only child keys).`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		walletFn := args[0]
-
-		// make sure the file exists
-		f, err := os.Open(walletFn)
-		cobra.CheckErr(err)
-		defer f.Close()
-
-		// get the password
-		fmt.Print("Enter wallet password: ")
-		password, err := password.Read(os.Stdin)
-		fmt.Println()
+		w, err := internal.LoadWallet(args[0], debug)
 		cobra.CheckErr(err)
 
-		// attempt to read it
-		wk := wallet.NewKey(wallet.WithPasswordOnly([]byte(password)))
-		w, err := wk.Open(f, debug)
-		cobra.CheckErr(err)
-
+		caption := make([]string, 0, 2)
+		maxWidth := 20
 		widthEnforcer := func(col string, maxLen int) string {
 			if len(col) <= maxLen {
 				return col
@@ -179,55 +171,52 @@ only child keys).`,
 			return fmt.Sprintf("%s..%s", col[:maxLen-7], col[len(col)-5:])
 		}
 
-		t := table.NewWriter()
-		t.SetOutputMirror(os.Stdout)
-		t.SetTitle("Wallet Contents")
-		caption := ""
-		if printPrivate {
-			caption = fmt.Sprintf("Mnemonic: %s", w.Mnemonic())
-		}
-		if !printFull {
-			if printPrivate {
-				caption += "\n"
-			}
-			caption += "To print full keys, use the --full flag."
-		}
-		t.SetCaption(caption)
-		maxWidth := 20
+		header := table.Row{"pubkey", "path", "name", "created"}
+
 		if printFull {
 			// full key is 64 bytes which is 128 chars in hex, need to print at least this much
 			maxWidth = 150
+		} else {
+			caption = append(caption, "To print full keys, use the --full flag.")
 		}
+
+		colCfgs := []table.ColumnConfig{
+			{Number: 1, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer},
+		}
+
 		// TODO: add spacemesh address format (bech32)
 		// https://github.com/spacemeshos/smcli/issues/38
 		if printPrivate {
-			t.AppendHeader(table.Row{
-				"pubkey",
-				"privkey",
-				"path",
-				"name",
-				"created",
-			})
-			t.SetColumnConfigs([]table.ColumnConfig{
-				{Number: 1, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer},
-				{Number: 2, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer},
-			})
-		} else {
-			t.AppendHeader(table.Row{
-				"pubkey",
-				"path",
-				"name",
-				"created",
-			})
-			t.SetColumnConfigs([]table.ColumnConfig{
-				{Number: 1, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer},
+			caption = append(caption, fmt.Sprintf("Mnemonic: %s", w.Mnemonic()))
+			header = append(header[:2], header[1:]...)
+			header[1] = "privkey"
+			colCfgs = append(colCfgs, table.ColumnConfig{
+				Number: 2, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer,
 			})
 		}
 
+		t := table.NewWriter()
+		t.SetOutputMirror(os.Stdout)
+		t.SetTitle("Wallet Contents")
+		t.SetCaption(strings.Join(caption, "\n"))
+		t.AppendHeader(header)
+		t.SetColumnConfigs(colCfgs)
+
 		// set the encoder
-		encoder := hex.EncodeToString
-		if printBase58 {
+		var encoder func([]byte) string
+		switch {
+		case printBase58:
 			encoder = base58.Encode
+		case printHex:
+			encoder = hex.EncodeToString
+		default:
+			encoder = func(data []byte) string {
+				dataConverted, err := bech32.ConvertBits(data, 8, 5, true)
+				cobra.CheckErr(err)
+				encoded, err := bech32.Encode(types.NetworkHRP(), dataConverted)
+				cobra.CheckErr(err)
+				return encoded
+			}
 		}
 
 		privKeyEncoder := func(privKey []byte) string {
@@ -325,7 +314,8 @@ func init() {
 	walletCmd.AddCommand(addrCmd)
 	readCmd.Flags().BoolVarP(&printPrivate, "private", "p", false, "Print private keys")
 	readCmd.Flags().BoolVarP(&printFull, "full", "f", false, "Print full keys (no abbreviation)")
-	readCmd.Flags().BoolVar(&printBase58, "base58", false, "Print keys in base58 (rather than hex)")
+	readCmd.Flags().BoolVar(&printBase58, "base58", false, "Print keys in base58 (rather than bech32)")
+	readCmd.Flags().BoolVar(&printHex, "hex", false, "Print keys in hex (rather than bech32)")
 	readCmd.Flags().BoolVar(&printParent, "parent", false, "Print parent key (not only child keys)")
 	readCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode")
 	createCmd.Flags().BoolVarP(&useLedger, "ledger", "l", false, "Create a wallet using a Ledger device")

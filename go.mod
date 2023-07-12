@@ -4,6 +4,7 @@ go 1.18
 
 require (
 	github.com/btcsuite/btcutil v1.0.2
+	github.com/cosmos/btcutil v1.0.5
 	github.com/jedib0t/go-pretty/v6 v6.4.6
 	github.com/spacemeshos/economics v0.1.0
 	github.com/spacemeshos/go-spacemesh v1.0.2
@@ -15,7 +16,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/c0mm4nd/go-ripemd v0.0.0-20200326052756-bd1759ad7d10 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/cosmos/btcutil v1.0.5 // indirect
 	github.com/go-llsqlite/llsqlite v0.0.0-20230612031458-a9e271fe723a // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
