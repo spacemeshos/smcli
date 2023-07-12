@@ -4,6 +4,8 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
+	"log"
+
 	"github.com/spacemeshos/economics/constants"
 	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/spacemeshos/go-spacemesh/genvm/core"
@@ -11,12 +13,6 @@ import (
 	"github.com/spacemeshos/go-spacemesh/genvm/templates/vault"
 	"github.com/spacemeshos/go-spacemesh/genvm/templates/vesting"
 	"github.com/spf13/cobra"
-	"log"
-)
-
-var (
-// debug indicates that the program is in debug mode.
-// debugGenesis bool
 )
 
 // genesisCmd represents the wallet command.
@@ -102,5 +98,4 @@ var verifyCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(genesisCmd)
 	genesisCmd.AddCommand(verifyCmd)
-	//readCmd.PersistentFlags().BoolVarP(&debugGenesis, "debug", "d", false, "enable debug mode")
 }
