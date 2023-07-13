@@ -42,6 +42,10 @@ var (
 
 	// useLedger indicates that the Ledger device should be used.
 	useLedger bool
+
+	// noAddress indicates that the address should not be shown when printing a key.
+	// This matches the old behavior of the read cmd.
+	noAddress bool
 )
 
 // walletCmd represents the wallet command.
@@ -145,7 +149,7 @@ sure the device is connected, unlocked, and the Spacemesh app is open.`,
 
 // readCmd reads an existing wallet file.
 var readCmd = &cobra.Command{
-	Use:                   "read [wallet file] [--full/-f] [--private/-p] [--parent] [--base58] [--hex]",
+	Use:                   "read [wallet file] [--full/-f] [--private/-p] [--parent] [--base58] [--hex] [--no-address]",
 	DisableFlagsInUseLine: true,
 	Short:                 "Reads an existing wallet file",
 	Long: `This command can be used to verify whether an existing wallet file can be
@@ -153,7 +157,7 @@ successfully read and decrypted, whether the password to open the file is correc
 It prints the accounts from the wallet file. By default it does not print private keys.
 Add --private to print private keys. Add --full to print full keys. Add --base58 to print
 keys in base58 format or --hex for hexdecimal rather than bech32. Add --parent to print parent key (and not
-only child keys).`,
+only child keys). Add --no-address to not print the address.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		w, err := internal.LoadWallet(args[0], debug)
@@ -184,8 +188,11 @@ only child keys).`,
 			{Number: 1, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer},
 		}
 
-		// TODO: add spacemesh address format (bech32)
-		// https://github.com/spacemeshos/smcli/issues/38
+		if !noAddress {
+			header = append(header[:3], header[2:]...)
+			header[2] = "address"
+		}
+
 		if printPrivate {
 			caption = append(caption, fmt.Sprintf("Mnemonic: %s", w.Mnemonic()))
 			header = append(header[:2], header[1:]...)
@@ -219,55 +226,42 @@ only child keys).`,
 			}
 		}
 
-		privKeyEncoder := func(privKey []byte) string {
-			if len(privKey) == 0 {
-				return "(none)"
+		addRow := func(account *wallet.EDKeyPair) {
+			row := make([]any, 0, 6) // Row len is 4 w/o address, up to 6 w/ priv key.
+			row = append(row, encoder(account.Public))
+
+			if printPrivate {
+				privKey := "(none)"
+				if len(account.Private) > 0 {
+					privKey = encoder(account.Private)
+				}
+
+				row = append(row, privKey)
 			}
-			return encoder(privKey)
+
+			row = append(row, account.Path.String())
+
+			if !noAddress {
+				row = append(row, types.GenerateAddress(account.Public).String())
+			}
+
+			row = append(row, account.DisplayName, account.Created)
+
+			t.AppendRow(row)
 		}
 
 		// print the master account
 		if printParent {
-			master := w.Secrets.MasterKeypair
-			if master != nil {
-				if printPrivate {
-					t.AppendRow(table.Row{
-						encoder(master.Public),
-						privKeyEncoder(master.Private),
-						master.Path.String(),
-						master.DisplayName,
-						master.Created,
-					})
-				} else {
-					t.AppendRow(table.Row{
-						encoder(master.Public),
-						master.Path.String(),
-						master.DisplayName,
-						master.Created,
-					})
-				}
+			if master := w.Secrets.MasterKeypair; master != nil {
+				addRow(master)
 			}
 		}
 
 		// print child accounts
 		for _, a := range w.Secrets.Accounts {
-			if printPrivate {
-				t.AppendRow(table.Row{
-					encoder(a.Public),
-					privKeyEncoder(a.Private),
-					a.Path.String(),
-					a.DisplayName,
-					a.Created,
-				})
-			} else {
-				t.AppendRow(table.Row{
-					encoder(a.Public),
-					a.Path.String(),
-					a.DisplayName,
-					a.Created,
-				})
-			}
+			addRow(a)
 		}
+
 		t.Render()
 	},
 }
@@ -317,6 +311,7 @@ func init() {
 	readCmd.Flags().BoolVar(&printBase58, "base58", false, "Print keys in base58 (rather than bech32)")
 	readCmd.Flags().BoolVar(&printHex, "hex", false, "Print keys in hex (rather than bech32)")
 	readCmd.Flags().BoolVar(&printParent, "parent", false, "Print parent key (not only child keys)")
+	readCmd.Flags().BoolVar(&noAddress, "no-address", false, "Do not print the address associated with the key")
 	readCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode")
 	createCmd.Flags().BoolVarP(&useLedger, "ledger", "l", false, "Create a wallet using a Ledger device")
 	addrCmd.Flags().BoolVar(&printParent, "parent", false, "Print parent address (not only child addresses)")
