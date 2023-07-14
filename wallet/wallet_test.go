@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
+	"github.com/spacemeshos/go-spacemesh/common/types"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -91,8 +92,12 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 
 	// Test conversion to a Spacemesh wallet address
 	expAddress := "sm1qqqqqqz9rf583slhn38g6q6a562ctltv9fv5w8q2gdz9k"
-	address := PubkeyToAddress(w.Secrets.Accounts[0].Public)
+	address := PubkeyToAddress(w.Secrets.Accounts[0].Public, types.NetworkHRP())
 	require.Equal(t, expAddress, address)
+
+	expAddressTestnet := "stest1qqqqqqz9rf583slhn38g6q6a562ctltv9fv5w8qha56t0"
+	addressTestnet := PubkeyToAddress(w.Secrets.Accounts[0].Public, "stest")
+	require.Equal(t, expAddressTestnet, addressTestnet)
 }
 
 func TestKeysInWalletMaintainExpectedPath(t *testing.T) {

@@ -14,6 +14,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
 
+	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/spacemeshos/smcli/common"
 	"github.com/spacemeshos/smcli/wallet"
 )
@@ -36,6 +37,9 @@ var (
 
 	// useLedger indicates that the Ledger device should be used.
 	useLedger bool
+
+	// hrp is the human-readable network identifier used in Spacemesh network addresses
+	hrp string
 )
 
 // walletCmd represents the wallet command.
@@ -264,7 +268,7 @@ only child keys).`,
 		for _, a := range w.Secrets.Accounts {
 			if printPrivate {
 				t.AppendRow(table.Row{
-					wallet.PubkeyToAddress(a.Public),
+					wallet.PubkeyToAddress(a.Public, hrp),
 					encoder(a.Public),
 					privKeyEncoder(a.Private),
 					a.Path.String(),
@@ -273,7 +277,7 @@ only child keys).`,
 				})
 			} else {
 				t.AppendRow(table.Row{
-					wallet.PubkeyToAddress(a.Public),
+					wallet.PubkeyToAddress(a.Public, hrp),
 					encoder(a.Public),
 					a.Path.String(),
 					a.DisplayName,
@@ -293,6 +297,7 @@ func init() {
 	readCmd.Flags().BoolVarP(&printFull, "full", "f", false, "Print full keys (no abbreviation)")
 	readCmd.Flags().BoolVar(&printBase58, "base58", false, "Print keys in base58 (rather than hex)")
 	readCmd.Flags().BoolVar(&printParent, "parent", false, "Print parent key (not only child keys)")
+	readCmd.Flags().StringVar(&hrp, "hrp", types.NetworkHRP(), "Set human-readable address prefix")
 	readCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug mode")
 	createCmd.Flags().BoolVarP(&useLedger, "ledger", "l", false, "Create a wallet using a Ledger device")
 }
