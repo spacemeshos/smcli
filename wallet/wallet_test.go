@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/stretchr/testify/require"
 	"github.com/tyler-smith/go-bip39"
 )
@@ -88,6 +89,15 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 	// Sanity check that the keypair works with the standard ed25519 library
 	sig := ed25519.Sign(ed25519.PrivateKey(w.Secrets.Accounts[0].Private), msg)
 	require.True(t, ed25519.Verify(ed25519.PublicKey(w.Secrets.Accounts[0].Public), msg, sig))
+
+	// Test conversion to a Spacemesh wallet address
+	expAddress := "sm1qqqqqqz9rf583slhn38g6q6a562ctltv9fv5w8q2gdz9k"
+	address := PubkeyToAddress(w.Secrets.Accounts[0].Public, types.NetworkHRP())
+	require.Equal(t, expAddress, address)
+
+	expAddressTestnet := "stest1qqqqqqz9rf583slhn38g6q6a562ctltv9fv5w8qha56t0"
+	addressTestnet := PubkeyToAddress(w.Secrets.Accounts[0].Public, "stest")
+	require.Equal(t, expAddressTestnet, addressTestnet)
 }
 
 func TestKeysInWalletMaintainExpectedPath(t *testing.T) {

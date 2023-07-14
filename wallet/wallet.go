@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/spacemeshos/go-spacemesh/common/types"
+	"github.com/spacemeshos/go-spacemesh/genvm/core"
+	walletTemplate "github.com/spacemeshos/go-spacemesh/genvm/templates/wallet"
 	"github.com/tyler-smith/go-bip39"
 
 	"github.com/spacemeshos/smcli/common"
@@ -169,4 +172,13 @@ func accountsFromMaster(masterKeypair *EDKeyPair, masterSeed []byte, n int) (acc
 
 func (w *Wallet) Mnemonic() string {
 	return w.Secrets.Mnemonic
+}
+
+func PubkeyToAddress(pubkey []byte, hrp string) string {
+	types.SetNetworkHRP(hrp)
+	key := [ed25519.PublicKeySize]byte{}
+	copy(key[:], pubkey)
+	walletArgs := &walletTemplate.SpawnArguments{PublicKey: key}
+	walletAddress := core.ComputePrincipal(walletTemplate.TemplateAddress, walletArgs)
+	return walletAddress.String()
 }
