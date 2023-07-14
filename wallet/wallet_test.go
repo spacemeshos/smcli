@@ -88,6 +88,11 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 	// Sanity check that the keypair works with the standard ed25519 library
 	sig := ed25519.Sign(ed25519.PrivateKey(w.Secrets.Accounts[0].Private), msg)
 	require.True(t, ed25519.Verify(ed25519.PublicKey(w.Secrets.Accounts[0].Public), msg, sig))
+
+	// Test conversion to a Spacemesh wallet address
+	expAddress := "sm1qqqqqqz9rf583slhn38g6q6a562ctltv9fv5w8q2gdz9k"
+	address := PubkeyToAddress(w.Secrets.Accounts[0].Public)
+	require.Equal(t, expAddress, address)
 }
 
 func TestKeysInWalletMaintainExpectedPath(t *testing.T) {
