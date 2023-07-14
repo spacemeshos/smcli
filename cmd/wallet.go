@@ -196,10 +196,9 @@ only child keys).`,
 			// full key is 64 bytes which is 128 chars in hex, need to print at least this much
 			maxWidth = 150
 		}
-		// TODO: add spacemesh address format (bech32)
-		// https://github.com/spacemeshos/smcli/issues/38
 		if printPrivate {
 			t.AppendHeader(table.Row{
+				"address",
 				"pubkey",
 				"privkey",
 				"path",
@@ -207,18 +206,19 @@ only child keys).`,
 				"created",
 			})
 			t.SetColumnConfigs([]table.ColumnConfig{
-				{Number: 1, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer},
 				{Number: 2, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer},
+				{Number: 3, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer},
 			})
 		} else {
 			t.AppendHeader(table.Row{
+				"address",
 				"pubkey",
 				"path",
 				"name",
 				"created",
 			})
 			t.SetColumnConfigs([]table.ColumnConfig{
-				{Number: 1, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer},
+				{Number: 2, WidthMax: maxWidth, WidthMaxEnforcer: widthEnforcer},
 			})
 		}
 
@@ -241,6 +241,7 @@ only child keys).`,
 			if master != nil {
 				if printPrivate {
 					t.AppendRow(table.Row{
+						"N/A",
 						encoder(master.Public),
 						privKeyEncoder(master.Private),
 						master.Path.String(),
@@ -249,6 +250,7 @@ only child keys).`,
 					})
 				} else {
 					t.AppendRow(table.Row{
+						"N/A",
 						encoder(master.Public),
 						master.Path.String(),
 						master.DisplayName,
@@ -262,6 +264,7 @@ only child keys).`,
 		for _, a := range w.Secrets.Accounts {
 			if printPrivate {
 				t.AppendRow(table.Row{
+					wallet.PubkeyToAddress(a.Public),
 					encoder(a.Public),
 					privKeyEncoder(a.Private),
 					a.Path.String(),
@@ -270,6 +273,7 @@ only child keys).`,
 				})
 			} else {
 				t.AppendRow(table.Row{
+					wallet.PubkeyToAddress(a.Public),
 					encoder(a.Public),
 					a.Path.String(),
 					a.DisplayName,

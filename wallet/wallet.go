@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/spacemeshos/go-spacemesh/genvm/core"
+	"github.com/spacemeshos/go-spacemesh/genvm/templates/wallet"
 	"strings"
 
 	"github.com/tyler-smith/go-bip39"
@@ -169,4 +171,12 @@ func accountsFromMaster(masterKeypair *EDKeyPair, masterSeed []byte, n int) (acc
 
 func (w *Wallet) Mnemonic() string {
 	return w.Secrets.Mnemonic
+}
+
+func PubkeyToAddress(pubkey []byte) string {
+	key := [ed25519.PublicKeySize]byte{}
+	copy(key[:], pubkey)
+	walletArgs := &wallet.SpawnArguments{PublicKey: key}
+	walletAddress := core.ComputePrincipal(wallet.TemplateAddress, walletArgs)
+	return walletAddress.String()
 }
