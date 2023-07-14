@@ -4,9 +4,9 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
-	"github.com/spacemeshos/go-spacemesh/common/types"
 	"testing"
 
+	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/stretchr/testify/require"
 	"github.com/tyler-smith/go-bip39"
 )

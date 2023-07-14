@@ -12,9 +12,9 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/jedib0t/go-pretty/v6/table"
+	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/spf13/cobra"
 
-	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/spacemeshos/smcli/common"
 	"github.com/spacemeshos/smcli/wallet"
 )
@@ -38,7 +38,7 @@ var (
 	// useLedger indicates that the Ledger device should be used.
 	useLedger bool
 
-	// hrp is the human-readable network identifier used in Spacemesh network addresses
+	// hrp is the human-readable network identifier used in Spacemesh network addresses.
 	hrp string
 )
 
