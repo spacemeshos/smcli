@@ -5,9 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/spacemeshos/go-spacemesh/genvm/core"
 	walletTemplate "github.com/spacemeshos/go-spacemesh/genvm/templates/wallet"
-	"strings"
 
 	"github.com/tyler-smith/go-bip39"
 
