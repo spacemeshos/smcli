@@ -9,7 +9,6 @@ import (
 
 	"github.com/spacemeshos/go-spacemesh/genvm/core"
 	walletTemplate "github.com/spacemeshos/go-spacemesh/genvm/templates/wallet"
-
 	"github.com/tyler-smith/go-bip39"
 
 	"github.com/spacemeshos/smcli/common"
