@@ -164,5 +164,9 @@ staticcheck: $(UNZIP_DEST)
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	staticcheck ./...
 
+.PHONY: tails
+tails:
+	docker build -o tails .
+
 clean:
 	rm -rf $(UNZIP_DEST)
