@@ -6,7 +6,7 @@ require (
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/jedib0t/go-pretty/v6 v6.4.6
 	github.com/spacemeshos/economics v0.1.0
-	github.com/spacemeshos/go-spacemesh v1.0.2
+	github.com/spacemeshos/go-spacemesh v1.0.6
 	github.com/spacemeshos/smkeys v1.0.4
 	github.com/stretchr/testify v1.8.4
 )
@@ -32,7 +32,7 @@ require (
 	github.com/spacemeshos/go-scale v1.1.10 // indirect
 	github.com/spacemeshos/merkle-tree v0.2.2 // indirect
 	github.com/spacemeshos/poet v0.8.6 // indirect
-	github.com/spacemeshos/post v0.8.6 // indirect
+	github.com/spacemeshos/post v0.8.8 // indirect
 	github.com/spacemeshos/sha256-simd v0.1.0 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
