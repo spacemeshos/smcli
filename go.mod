@@ -6,7 +6,7 @@ require (
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/jedib0t/go-pretty/v6 v6.4.6
 	github.com/spacemeshos/economics v0.1.0
-	github.com/spacemeshos/go-spacemesh v1.0.2
+	github.com/spacemeshos/go-spacemesh v1.1.2
 	github.com/spacemeshos/smkeys v1.0.4
 	github.com/stretchr/testify v1.8.4
 )
@@ -31,17 +31,16 @@ require (
 	github.com/prometheus/procfs v0.11.0 // indirect
 	github.com/spacemeshos/go-scale v1.1.10 // indirect
 	github.com/spacemeshos/merkle-tree v0.2.2 // indirect
-	github.com/spacemeshos/poet v0.8.6 // indirect
-	github.com/spacemeshos/post v0.8.6 // indirect
+	github.com/spacemeshos/poet v0.8.9 // indirect
+	github.com/spacemeshos/post v0.9.2 // indirect
 	github.com/spacemeshos/sha256-simd v0.1.0 // indirect
 	github.com/zeebo/blake3 v0.2.3 // indirect
-	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/exp v0.0.0-20230711153332-06a737ee72cb // indirect
+	go.uber.org/zap v1.25.0 // indirect
+	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1 // indirect
 	golang.org/x/net v0.12.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
-	google.golang.org/grpc v1.56.2 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230726155614-23370e0ffb3e // indirect
+	google.golang.org/grpc v1.57.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
 )
 
@@ -67,7 +66,7 @@ require (
 	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/xdg-go/pbkdf2 v1.0.0
 	golang.org/x/crypto v0.11.0 // indirect
-	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/term v0.10.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
