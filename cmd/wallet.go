@@ -4,15 +4,24 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/spacemeshos/go-spacemesh/genvm/core"
+	"github.com/spacemeshos/go-spacemesh/genvm/sdk"
+	"github.com/spacemeshos/go-spacemesh/signing"
+	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"os"
 	"strconv"
 	"strings"
 
+	api "github.com/spacemeshos/api/release/go/spacemesh/v1"
+	"google.golang.org/grpc"
+
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/hashicorp/go-secure-stdlib/password"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spacemeshos/go-spacemesh/common/types"
+	walletSdk "github.com/spacemeshos/go-spacemesh/genvm/sdk/wallet"
+	walletTemplate "github.com/spacemeshos/go-spacemesh/genvm/templates/wallet"
 	"github.com/spf13/cobra"
 
 	"github.com/spacemeshos/smcli/common"
@@ -40,6 +49,15 @@ var (
 
 	// hrp is the human-readable network identifier used in Spacemesh network addresses.
 	hrp string
+
+	// maxGas is the max amount to spend on gas.
+	maxGas uint32
+
+	// gasPrice is the price in smidge paid for one unit of gas.
+	gasPrice uint8
+
+	// nodeUri is the address of the node to talk to
+	nodeUri string
 )
 
 // walletCmd represents the wallet command.
@@ -138,6 +156,113 @@ sure the device is connected, unlocked, and the Spacemesh app is open.`,
 		cobra.CheckErr(wk.Export(f2, w))
 
 		fmt.Printf("Wallet saved to %s. BACK UP THIS FILE NOW!\n", walletFn)
+	},
+}
+
+// sendCmd initiates a simple coin send transaction
+var sendCmd = &cobra.Command{
+	Use:   "send [wallet file] [sender] [recipient] [amount (in smidge)] [--maxGas N] [--gasPrice N] [--node N]",
+	Short: "Sends coins from the specified wallet and account",
+	Args:  cobra.ExactArgs(4),
+	Run: func(cmd *cobra.Command, args []string) {
+		walletFn := args[0]
+		senderPubkeyHex := args[1]
+		recipientAddressStr := args[2]
+		amount, err := strconv.ParseUint(args[3], 10, 64)
+		cobra.CheckErr(err)
+
+		// make sure the file exists
+		f, err := os.Open(walletFn)
+		cobra.CheckErr(err)
+		defer f.Close()
+
+		// get the password
+		fmt.Print("Enter wallet password: ")
+		password, err := password.Read(os.Stdin)
+		fmt.Println()
+		cobra.CheckErr(err)
+
+		// attempt to read it
+		wk := wallet.NewKey(wallet.WithPasswordOnly([]byte(password)))
+		w, err := wk.Open(f, debug)
+		cobra.CheckErr(err)
+
+		// parse the sender and make sure the wallet contains it
+		var keypair *wallet.EDKeyPair
+		for _, kp := range w.Secrets.Accounts {
+			if hex.EncodeToString(kp.Public) == senderPubkeyHex {
+				keypair = kp
+				break
+			}
+		}
+		if keypair == nil {
+			log.Fatalln("pubkey not found in wallet file")
+		}
+
+		// parse principal address
+		spawnargs := walletTemplate.SpawnArguments{}
+		copy(spawnargs.PublicKey[:], signing.Public(signing.PrivateKey(keypair.Private)))
+		principal := core.ComputePrincipal(walletTemplate.TemplateAddress, &spawnargs)
+		fmt.Printf("principal: %s\n", principal.String())
+
+		// parse the recipient address
+		recipientAddress, err := types.StringToAddress(recipientAddressStr)
+		cobra.CheckErr(err)
+
+		// establish grpc link and read principal nonce and balance
+		cc, err := grpc.Dial(nodeUri, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		cobra.CheckErr(err)
+		defer cc.Close()
+
+		meshClient := api.NewMeshServiceClient(cc)
+		meshResp, err := meshClient.GenesisID(cmd.Context(), &api.GenesisIDRequest{})
+		cobra.CheckErr(err)
+		var genesisId types.Hash20
+		copy(genesisId[:], meshResp.GenesisId)
+
+		client := api.NewNodeServiceClient(cc)
+		statusResp, err := client.Status(cmd.Context(), &api.StatusRequest{})
+		cobra.CheckErr(err)
+		fmt.Printf("Synced: %v\nPeers: %d\nSyncedLayer: %d\nTopLayer: %d\nVerifiedLayer: %d\nGenesisID: %s\n",
+			statusResp.Status.IsSynced,
+			statusResp.Status.ConnectedPeers,
+			statusResp.Status.SyncedLayer.GetNumber(),
+			statusResp.Status.TopLayer.GetNumber(),
+			statusResp.Status.VerifiedLayer.GetNumber(),
+			genesisId.String(),
+		)
+
+		gstate := api.NewGlobalStateServiceClient(cc)
+		resp, err := gstate.Account(cmd.Context(), &api.AccountRequest{AccountId: &api.AccountId{Address: principal.String()}})
+		cobra.CheckErr(err)
+		nonce := resp.AccountWrapper.StateProjected.Counter
+		balance := resp.AccountWrapper.StateProjected.Balance
+		fmt.Printf("Sender nonce %d balance %d\n", nonce, balance.Value)
+
+		// generate the tx
+		tx := walletSdk.Spend(signing.PrivateKey(keypair.Private), recipientAddress, amount, nonce+1,
+			sdk.WithGenesisID(genesisId),
+			//sdk.WithGasPrice(0),
+		)
+		fmt.Printf("Generated signed tx: %s\n", hex.EncodeToString(tx))
+
+		// parse it
+		txService := api.NewTransactionServiceClient(cc)
+		txResp, err := txService.ParseTransaction(cmd.Context(), &api.ParseTransactionRequest{Transaction: tx})
+		cobra.CheckErr(err)
+		fmt.Printf("parsed tx: principal: %s, gasprice: %d, maxgas: %d, nonce: %d\n",
+			txResp.Tx.Principal.Address, txResp.Tx.GasPrice, txResp.Tx.MaxGas, txResp.Tx.Nonce.Counter)
+
+		// broadcast it
+		//txResp, err := txService.ParseTransaction(cmd.Context(), &api.ParseTransactionRequest{Transaction: tx})
+		sendResp, err := txService.SubmitTransaction(cmd.Context(), &api.SubmitTransactionRequest{Transaction: tx})
+		cobra.CheckErr(err)
+		//fmt.Printf("status: %s, txid: %s, tx state: %s",
+		//	txResp.String(), txResp.Tx.Id, txResp.Tx.String())
+
+		// return the txid
+		fmt.Printf("status code: %d, txid: %s, tx state: %s\n",
+			sendResp.Status.Code, hex.EncodeToString(sendResp.Txstate.Id.Id), sendResp.Txstate.State.String())
 	},
 }
 
@@ -293,6 +418,10 @@ func init() {
 	rootCmd.AddCommand(walletCmd)
 	walletCmd.AddCommand(createCmd)
 	walletCmd.AddCommand(readCmd)
+	walletCmd.AddCommand(sendCmd)
+	sendCmd.Flags().Uint8Var(&gasPrice, "gasPrice", 1, "Set gas price")
+	sendCmd.Flags().Uint32Var(&maxGas, "maxGas", 0, "Set max gas")
+	sendCmd.Flags().StringVar(&nodeUri, "nodeUri", "localhost:9092", "Node URI")
 	readCmd.Flags().BoolVarP(&printPrivate, "private", "p", false, "Print private keys")
 	readCmd.Flags().BoolVarP(&printFull, "full", "f", false, "Print full keys (no abbreviation)")
 	readCmd.Flags().BoolVar(&printBase58, "base58", false, "Print keys in base58 (rather than hex)")
