@@ -48,7 +48,7 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/hashicorp/go-secure-stdlib/password v0.1.2
+	github.com/hashicorp/go-secure-stdlib/password v0.1.3
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
