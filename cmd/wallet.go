@@ -45,6 +45,30 @@ var (
 	hrp string
 )
 
+func openWallet(walletFn string) (*wallet.Wallet, error) {
+	// make sure the file exists
+	f, err := os.Open(walletFn)
+	cobra.CheckErr(err)
+	defer f.Close()
+
+	// get the password
+	fmt.Print("Enter wallet password: ")
+	password, err := password.Read(os.Stdin)
+	fmt.Println()
+	if err != nil {
+		return nil, err
+	}
+
+	// attempt to read it
+	wk := wallet.NewKey(wallet.WithPasswordOnly([]byte(password)))
+	w, err := wk.Open(f, debug)
+	if err != nil {
+		return nil, err
+	}
+
+	return w, nil
+}
+
 // walletCmd represents the wallet command.
 var walletCmd = &cobra.Command{
 	Use:   "wallet",
@@ -158,20 +182,7 @@ only child keys).`,
 	Run: func(cmd *cobra.Command, args []string) {
 		walletFn := args[0]
 
-		// make sure the file exists
-		f, err := os.Open(walletFn)
-		cobra.CheckErr(err)
-		defer f.Close()
-
-		// get the password
-		fmt.Print("Enter wallet password: ")
-		password, err := password.Read(os.Stdin)
-		fmt.Println()
-		cobra.CheckErr(err)
-
-		// attempt to read it
-		wk := wallet.NewKey(wallet.WithPasswordOnly([]byte(password)))
-		w, err := wk.Open(f, debug)
+		w, err := openWallet(walletFn)
 		cobra.CheckErr(err)
 
 		widthEnforcer := func(col string, maxLen int) string {
@@ -300,20 +311,7 @@ var signCmd = &cobra.Command{
 		walletFn := args[0]
 		message := args[1]
 
-		// make sure the file exists
-		f, err := os.Open(walletFn)
-		cobra.CheckErr(err)
-		defer f.Close()
-
-		// get the password
-		fmt.Print("Enter wallet password: ")
-		password, err := password.Read(os.Stdin)
-		fmt.Println()
-		cobra.CheckErr(err)
-
-		// attempt to read it
-		wk := wallet.NewKey(wallet.WithPasswordOnly([]byte(password)))
-		w, err := wk.Open(f, debug)
+		w, err := openWallet(walletFn)
 		cobra.CheckErr(err)
 
 		// Sign message using child account 0.
