@@ -4,8 +4,8 @@ go 1.18
 
 require (
 	github.com/btcsuite/btcutil v1.0.2
-	github.com/jedib0t/go-pretty/v6 v6.4.6
-	github.com/spacemeshos/economics v0.1.0
+	github.com/jedib0t/go-pretty/v6 v6.4.8
+	github.com/spacemeshos/economics v0.1.1
 	github.com/spacemeshos/go-spacemesh v1.0.2
 	github.com/spacemeshos/smkeys v1.0.4
 	github.com/stretchr/testify v1.8.4
@@ -51,7 +51,7 @@ require (
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
-	github.com/hashicorp/go-secure-stdlib/password v0.1.2
+	github.com/hashicorp/go-secure-stdlib/password v0.1.3
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
