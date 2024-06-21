@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	smbip32 "github.com/spacemeshos/smkeys/bip32"
@@ -95,7 +96,7 @@ func (kp *EDKeyPair) NewChildKeyPair(seed []byte, childIdx int) (*EDKeyPair, err
 			Path:        path,
 		}, nil
 	default:
-		return nil, fmt.Errorf("unknown key type")
+		return nil, errors.New("unknown key type")
 	}
 }
 
@@ -109,7 +110,7 @@ func pubkeyFromLedger(path HDPath, master bool) (*EDKeyPair, error) {
 	// the one they really care about, which is the first child key.
 	key, err := ledger.ReadPubkeyFromLedger("", HDPathToString(path), !master)
 	if err != nil {
-		return nil, fmt.Errorf("error reading pubkey from ledger. Are you sure it's connected, unlocked, and the Spacemesh app is open? err: %w", err)
+		return nil, fmt.Errorf("error reading pubkey from ledger: %w", err)
 	}
 
 	name := "Ledger Master Key"

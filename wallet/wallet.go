@@ -4,6 +4,7 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -15,7 +16,7 @@ import (
 	"github.com/spacemeshos/smcli/common"
 )
 
-var errWhitespace = fmt.Errorf("whitespace violation in mnemonic phrase")
+var errWhitespace = errors.New("whitespace violation in mnemonic phrase")
 
 // Wallet is the basic data structure.
 type Wallet struct {
@@ -95,7 +96,7 @@ func NewMultiWalletRandomMnemonic(n int) (*Wallet, error) {
 
 func NewMultiWalletFromMnemonic(m string, n int) (*Wallet, error) {
 	if n < 0 || n > common.MaxAccountsPerWallet {
-		return nil, fmt.Errorf("invalid number of accounts")
+		return nil, errors.New("invalid number of accounts")
 	}
 
 	// bip39 lib doesn't properly validate whitespace so we have to do that manually.
@@ -105,7 +106,7 @@ func NewMultiWalletFromMnemonic(m string, n int) (*Wallet, error) {
 
 	// this checks the number of words and the checksum.
 	if !bip39.IsMnemonicValid(m) {
-		return nil, fmt.Errorf("invalid mnemonic")
+		return nil, errors.New("invalid mnemonic")
 	}
 
 	// TODO: add option for user to provide passphrase
@@ -125,10 +126,12 @@ func NewMultiWalletFromMnemonic(m string, n int) (*Wallet, error) {
 
 func NewMultiWalletFromLedger(n int) (*Wallet, error) {
 	if n < 0 || n > common.MaxAccountsPerWallet {
-		return nil, fmt.Errorf("invalid number of accounts")
+		return nil, errors.New("invalid number of accounts")
 	}
 	masterKeyPair, err := NewMasterKeyPairFromLedger()
 	if err != nil {
+		fmt.Println("Error: ", err)
+		fmt.Println("Are you sure the ledger is connected, unlocked, and the Spacemesh app is open?")
 		return nil, err
 	}
 	// seed is not used in case of ledger

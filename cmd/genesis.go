@@ -31,8 +31,9 @@ var verifyCmd = &cobra.Command{
 
 		// first, collect the keys
 		var keys []core.PublicKey
-		fmt.Print("First, let's collect your public keys. Keys must be entered in hex format: 64 characters, without 0x prefix.\n")
-		fmt.Print("Enter pubkeys one at a time; press enter again when done: ")
+		fmt.Print("First, let's collect your public keys. ")
+		fmt.Print("Keys must be entered in hex format: 64 characters, without 0x prefix.\n")
+		fmt.Print("Enter pub keys one at a time; press enter again when done: ")
 		for {
 			var keyStr string
 			_, err := fmt.Scanln(&keyStr)

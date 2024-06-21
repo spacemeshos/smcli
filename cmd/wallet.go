@@ -83,7 +83,8 @@ sure the device is connected, unlocked, and the Spacemesh app is open.`,
 			text, err := password.Read(os.Stdin)
 			fmt.Println()
 			cobra.CheckErr(err)
-			fmt.Println("Note: This application does not yet support BIP-39-compatible optional passwords. Support will be added soon.")
+			fmt.Print("Note: This application does not yet support BIP-39-compatible optional passwords. ")
+			fmt.Println("Support will be added soon.")
 
 			// It's critical that we trim whitespace, including CRLF. Otherwise it will get included in the mnemonic.
 			text = strings.TrimSpace(text)
@@ -91,9 +92,12 @@ sure the device is connected, unlocked, and the Spacemesh app is open.`,
 			if text == "" {
 				w, err = wallet.NewMultiWalletRandomMnemonic(n)
 				cobra.CheckErr(err)
-				fmt.Println("\nThis is your mnemonic (seed phrase). Write it down and store it safely. It is the ONLY way to restore your wallet.")
-				fmt.Println("Neither Spacemesh nor anyone else can help you restore your wallet without this mnemonic.")
-				fmt.Println("\n***********************************\nSAVE THIS MNEMONIC IN A SAFE PLACE!\n***********************************")
+				fmt.Print("\nThis is your mnemonic (seed phrase). Write it down and store it safely.")
+				fmt.Print("It is the ONLY way to restore your wallet.\n")
+				fmt.Print("Neither Spacemesh nor anyone else can help you restore your wallet without this mnemonic.\n")
+				fmt.Print("\n***********************************\n")
+				fmt.Print("SAVE THIS MNEMONIC IN A SAFE PLACE!")
+				fmt.Print("\n***********************************\n")
 				fmt.Println()
 				fmt.Println(w.Mnemonic())
 				fmt.Println("\nPress enter when you have securely saved your mnemonic.")
