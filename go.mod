@@ -1,11 +1,10 @@
 module github.com/spacemeshos/smcli
 
-go 1.22.2
-toolchain go1.22.4
+go 1.22.3
 
 require (
 	github.com/btcsuite/btcutil v1.0.2
-	github.com/jedib0t/go-pretty/v6 v6.5.6
+	github.com/jedib0t/go-pretty/v6 v6.5.9
 	github.com/spacemeshos/economics v0.1.3
 	github.com/spacemeshos/go-spacemesh v1.6.0
 	github.com/spacemeshos/smkeys v1.0.4
