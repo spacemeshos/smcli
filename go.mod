@@ -2,8 +2,6 @@ module github.com/spacemeshos/smcli
 
 go 1.22.2
 
-toolchain go1.22.4
-
 require (
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/jedib0t/go-pretty/v6 v6.5.6

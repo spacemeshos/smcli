@@ -96,9 +96,9 @@ $(DOWNLOAD_DEST):
 .PHONY: install
 install:
 	go mod download
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.52.0
-	go install gotest.tools/gotestsum@v1.9.0
-	go install honnef.co/go/tools/cmd/staticcheck@v0.3.3
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.57.0
+	go install gotest.tools/gotestsum@v1.11.0
+	go install honnef.co/go/tools/cmd/staticcheck@v0.4.7
 
 .PHONY: tidy
 tidy:
