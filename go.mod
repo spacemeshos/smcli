@@ -5,6 +5,8 @@ go 1.22.3
 require (
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/jedib0t/go-pretty/v6 v6.5.9
+	github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a
+	github.com/sirupsen/logrus v1.8.1
 	github.com/spacemeshos/economics v0.1.3
 	github.com/spacemeshos/go-spacemesh v1.6.0
 	github.com/spacemeshos/smkeys v1.0.4
@@ -101,7 +103,6 @@ require (
 	github.com/multiformats/go-multistream v0.5.0 // indirect
 	github.com/multiformats/go-varint v0.0.7 // indirect
 	github.com/natefinch/atomic v1.0.1 // indirect
-	github.com/oasisprotocol/curve25519-voi v0.0.0-20230904125328-1f23a7beb09a // indirect
 	github.com/onsi/ginkgo/v2 v2.17.1 // indirect
 	github.com/opencontainers/runtime-spec v1.2.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0 // indirect
