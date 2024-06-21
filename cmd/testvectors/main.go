@@ -18,10 +18,11 @@ import (
 	"github.com/spacemeshos/go-spacemesh/genvm/core"
 	"github.com/spacemeshos/go-spacemesh/genvm/sdk"
 
-	// sdkMultisig "github.com/spacemeshos/go-spacemesh/genvm/sdk/multisig"
+	sdkMultisig "github.com/spacemeshos/go-spacemesh/genvm/sdk/multisig"
 	// sdkVesting "github.com/spacemeshos/go-spacemesh/genvm/sdk/vesting"
 	sdkWallet "github.com/spacemeshos/go-spacemesh/genvm/sdk/wallet"
-	"github.com/spacemeshos/go-spacemesh/genvm/templates/wallet"
+	templateMultisig "github.com/spacemeshos/go-spacemesh/genvm/templates/multisig"
+	templateWallet "github.com/spacemeshos/go-spacemesh/genvm/templates/wallet"
 	"github.com/spacemeshos/go-spacemesh/signing"
 	"github.com/spacemeshos/go-spacemesh/sql"
 )
@@ -64,7 +65,7 @@ type TestVector struct {
 
 func init() {
 	// Set log level based on an environment variable
-	if os.Getenv("DEBUG_MODE") == "true" {
+	if os.Getenv("DEBUG") != "" {
 		logrus.SetLevel(logrus.DebugLevel)
 	} else {
 		// logrus.SetLevel(logrus.InfoLevel)
@@ -163,10 +164,15 @@ func generateTestVectors() []TestVector {
 			sdk.WithGenesisID(genesisID),
 			sdk.WithGasPrice(1),
 		}
-		principal := core.ComputePrincipal(wallet.TemplateAddress, &wallet.SpawnArguments{PublicKey: pubCore})
 
 		// we need a VM object for validation and gas cost computation
 		vm := genvm.New(sql.InMemory(), genvm.WithConfig(genvm.Config{GasLimit: math.MaxUint64, GenesisID: genesisID}))
+
+		// SIMPLE WALLET (SINGLE SIG)
+		spawnArgsWallet := &templateWallet.SpawnArguments{
+			PublicKey: pubCore,
+		}
+		principal := core.ComputePrincipal(templateWallet.TemplateAddress, spawnArgsWallet)
 
 		// our random account needs a balance so it can be spawned
 		// this is not strictly necessary for the test vectors but it allows us to perform validation
@@ -175,16 +181,68 @@ func generateTestVectors() []TestVector {
 			Balance: constants.OneSmesh,
 		}})
 
-		// simple wallet
-		for txtype, tx := range map[typeTx][]byte{
-			Spawn:     sdkWallet.Spawn(priv, wallet.TemplateAddress, &wallet.SpawnArguments{PublicKey: pubCore}, nonce, opts...),
-			SelfSpawn: sdkWallet.SelfSpawn(priv, nonce, opts...),
-			Spend:     sdkWallet.Spend(priv, destination, amount, nonce, opts...),
-		} {
-			logrus.Debugf("Generating test vector for %s %s %s", hrp, "wallet", txtype)
-			testVector := txToTestVector(tx, vm, index, amount, nonce, Wallet, txtype, destination.String(), hrp)
+		// need a list, not a map, since order matters here
+		// (self-spawn must come before spend)
+		txList := []struct {
+			txtype typeTx
+			tx     []byte
+		}{
+			{txtype: Spawn, tx: sdkWallet.Spawn(priv, templateWallet.TemplateAddress, spawnArgsWallet, nonce, opts...)},
+			{txtype: SelfSpawn, tx: sdkWallet.SelfSpawn(priv, nonce, opts...)},
+			{txtype: Spend, tx: sdkWallet.Spend(priv, destination, amount, nonce, opts...)},
+		}
+		for _, txPair := range txList {
+			logrus.Debugf("[%d] Generating test vector for %s %s %s", index, hrp, "wallet", txPair.txtype)
+			testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Wallet, txPair.txtype, destination.String(), hrp)
 			testVectors = append(testVectors, testVector)
 			index++
+		}
+
+		// MULTISIG
+		// include 1- and 2- of -1 and -2 (m of n)
+		for _, m := range []uint8{1, 2} {
+			for _, n := range []uint8{1, 2} {
+				// fill in the missing public keys (we already have one)
+				pubKeys := make([]core.PublicKey, n)
+
+				// frustratingly, we need the same list of pubkeys in a different format
+				// https://github.com/spacemeshos/go-spacemesh/issues/6061
+				edPubKeys := make([]ed25519.PublicKey, n)
+
+				pubKeys[0] = pubCore
+				edPubKeys[0] = ed25519.PublicKey(pub.Bytes())
+				if n > 1 {
+					pub2, _ := getKey()
+					pubKeys[1] = core.PublicKey(types.BytesToHash(pub2.Bytes()))
+					edPubKeys[1] = ed25519.PublicKey(pub2.Bytes())
+				}
+
+				spawnArgsMultisig := &templateMultisig.SpawnArguments{
+					Required:   m,
+					PublicKeys: pubKeys,
+				}
+
+				principal = core.ComputePrincipal(templateMultisig.TemplateAddress, spawnArgsMultisig)
+				vm.ApplyGenesis([]types.Account{{
+					Address: principal,
+					Balance: constants.OneSmesh,
+				}})
+
+				txList = []struct {
+					txtype typeTx
+					tx     []byte
+				}{
+					{txtype: Spawn, tx: sdkMultisig.Spawn(0, priv, principal, templateMultisig.TemplateAddress, spawnArgsMultisig, nonce, opts...).Raw()},
+					{txtype: SelfSpawn, tx: sdkMultisig.SelfSpawn(0, priv, templateMultisig.TemplateAddress, m, edPubKeys, nonce, opts...).Raw()},
+					{txtype: Spend, tx: sdkMultisig.Spend(0, priv, principal, destination, amount, nonce, opts...).Raw()},
+				}
+				for _, txPair := range txList {
+					logrus.Debugf("[%d] Generating test vector for %s %s %s %d of %d", index, hrp, "multisig", txPair.txtype, m, n)
+					testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Multisig, txPair.txtype, destination.String(), hrp)
+					testVectors = append(testVectors, testVector)
+					index++
+				}
+			}
 		}
 	}
 	return testVectors
