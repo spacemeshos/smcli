@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"strconv"
+	"strings"
 )
 
 //lint:file-ignore SA4016 ignore ineffective bitwise operations to aid readability
@@ -128,15 +130,18 @@ func IsPathCompletelyHardened(path HDPath) bool {
 // HDPathToString converts a BIP44 HD path to a string of the form
 // "m/44'/540'/account'/chain'/address_index'".
 func HDPathToString(path HDPath) string {
-	s := "m"
+	var sb strings.Builder
+	sb.WriteString("m")
 	for _, p := range path {
+		sb.WriteString("/")
 		if p >= BIP32HardenedKeyStart {
-			s += "/" + fmt.Sprint(p-BIP32HardenedKeyStart) + "'"
+			sb.WriteString(strconv.FormatUint(uint64(p-BIP32HardenedKeyStart), 10))
+			sb.WriteString("'")
 		} else {
-			s += "/" + fmt.Sprint(p)
+			sb.WriteString(strconv.FormatUint(uint64(p), 10))
 		}
 	}
-	return s
+	return sb.String()
 }
 
 func parseUint(s string) uint {

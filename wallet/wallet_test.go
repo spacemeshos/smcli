@@ -42,6 +42,7 @@ func TestAccountFromSeed(t *testing.T) {
 	keypair := accts[0]
 
 	expPubKey := "feae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd"
+	//nolint:lll
 	expPrivKey := "05fe9affa5562ca833faf3803ce5f6f7615d3c37c4a27903492027f6853e486dfeae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd"
 
 	actualPubKey := hex.EncodeToString(keypair.Public)
@@ -77,6 +78,7 @@ func TestWalletFromGivenMnemonic(t *testing.T) {
 	w, err := NewMultiWalletFromMnemonic(mnemonic, 1)
 	require.NoError(t, err)
 	expPubKey := "de30fc9b812248583da6259433626fcdd2cb5ce589b00047b81e127950b9bca6"
+	//nolint:lll
 	expPrivKey := "cd85df73aa3bc31de2f0b69bb1421df7eb0cdca7cb170a457869ab337749dae1de30fc9b812248583da6259433626fcdd2cb5ce589b00047b81e127950b9bca6"
 
 	actualPubKey := hex.EncodeToString(w.Secrets.Accounts[0].Public)

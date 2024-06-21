@@ -45,8 +45,8 @@ func TestChildKeyPair(t *testing.T) {
 	require.NoError(t, err)
 	childKeyPair1, err := masterKeyPair.NewChildKeyPair(goodSeed, 0)
 	require.Equal(t, path, childKeyPair1.Path)
-	require.Equal(t, ed25519.PrivateKeySize, len(childKeyPair1.Private))
-	require.Equal(t, ed25519.PublicKeySize, len(childKeyPair1.Public))
+	require.Len(t, childKeyPair1.Private, ed25519.PrivateKeySize)
+	require.Len(t, childKeyPair1.Public, ed25519.PublicKeySize)
 	require.NoError(t, err)
 	require.NotEmpty(t, childKeyPair1)
 
@@ -59,17 +59,18 @@ func TestChildKeyPair(t *testing.T) {
 	// generate second keypair and check lengths
 	childKeyPair2, err := bip32.Derive(HDPathToString(path), goodSeed)
 	require.NoError(t, err)
-	require.Equal(t, ed25519.PrivateKeySize, len(childKeyPair2))
+	require.Len(t, childKeyPair2, ed25519.PrivateKeySize)
 	privkey2 := PrivateKey(childKeyPair2[:])
-	require.Equal(t, ed25519.PrivateKeySize, len(privkey2))
+	require.Len(t, privkey2, ed25519.PrivateKeySize)
 	edpubkey2 := ed25519.PrivateKey(privkey2).Public().(ed25519.PublicKey)
-	require.Equal(t, ed25519.PublicKeySize, len(edpubkey2))
+	require.Len(t, edpubkey2, ed25519.PublicKeySize)
 	pubkey2 := PublicKey(edpubkey2)
-	require.Equal(t, ed25519.PublicKeySize, len(pubkey2))
+	require.Len(t, pubkey2, ed25519.PublicKeySize)
 
 	// make sure they agree
 	require.Equal(t, "feae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd", hex.EncodeToString(pubkey2))
 	require.Equal(t, hex.EncodeToString(childKeyPair1.Public), hex.EncodeToString(pubkey2))
+	//nolint:lll
 	require.Equal(t, "05fe9affa5562ca833faf3803ce5f6f7615d3c37c4a27903492027f6853e486dfeae6977b42bf3441d04314d09c72c5d6f2d1cb4bf94834680785b819f8738dd", hex.EncodeToString(privkey2))
 	require.Equal(t, hex.EncodeToString(childKeyPair1.Private), hex.EncodeToString(privkey2))
 }

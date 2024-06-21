@@ -8,7 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/sha512"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
 	"log"
 
@@ -126,7 +126,7 @@ func WithPbkdf2Password(password []byte) WalletKeyOpt {
 }
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html#71-encryption-types-to-use
-func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte, err error) {
+func (k *WalletKey) encrypt(plaintext []byte) (ciphertext, nonce []byte, err error) {
 	block, err := aes.NewCipher(k.key)
 	if err != nil {
 		return
@@ -146,7 +146,7 @@ func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte, 
 	return
 }
 
-func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, err error) {
+func (k *WalletKey) decrypt(ciphertext, nonce []byte) (plaintext []byte, err error) {
 	block, err := aes.NewCipher(k.key)
 	if err != nil {
 		return
@@ -171,7 +171,7 @@ func (k *WalletKey) Open(file io.Reader, debugMode bool) (*Wallet, error) {
 		var salt [Pbkdf2SaltBytesLen]byte
 		copy(salt[:], ew.Secrets.KDFParams.Salt)
 		if !bytes.Equal(salt[:], ew.Secrets.KDFParams.Salt) {
-			return nil, fmt.Errorf("error reading encrypted wallet file salt, check salt length")
+			return nil, errors.New("error reading encrypted wallet file salt, check salt length")
 		}
 		WithSalt(salt)(k)
 	} else if !bytes.Equal(ew.Secrets.KDFParams.Salt, k.salt) {
@@ -206,15 +206,15 @@ func (k *WalletKey) Open(file io.Reader, debugMode bool) (*Wallet, error) {
 	return w, nil
 }
 
-func (k *WalletKey) Export(file io.Writer, w *Wallet) (err error) {
+func (k *WalletKey) Export(file io.Writer, w *Wallet) error {
 	// encrypt the secrets
 	plaintext, err := json.Marshal(w.Secrets)
 	if err != nil {
-		return
+		return err
 	}
 	ciphertext, nonce, err := k.encrypt(plaintext)
 	if err != nil {
-		return
+		return err
 	}
 	ew := &EncryptedWalletFile{
 		Meta: w.Meta,
