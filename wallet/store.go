@@ -126,7 +126,7 @@ func WithPbkdf2Password(password []byte) WalletKeyOpt {
 }
 
 // https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html#71-encryption-types-to-use
-func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte, err error) {
+func (k *WalletKey) encrypt(plaintext []byte) (ciphertext, nonce []byte, err error) {
 	block, err := aes.NewCipher(k.key)
 	if err != nil {
 		return
@@ -146,7 +146,7 @@ func (k *WalletKey) encrypt(plaintext []byte) (ciphertext []byte, nonce []byte, 
 	return
 }
 
-func (k *WalletKey) decrypt(ciphertext []byte, nonce []byte) (plaintext []byte, err error) {
+func (k *WalletKey) decrypt(ciphertext, nonce []byte) (plaintext []byte, err error) {
 	block, err := aes.NewCipher(k.key)
 	if err != nil {
 		return
