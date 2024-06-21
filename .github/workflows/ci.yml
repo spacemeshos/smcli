@@ -18,7 +18,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
       - name: set up go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.go-version }}
       - name: fmt, tidy
@@ -36,7 +36,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
       - name: set up go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.go-version }}
       - name: lint
@@ -53,7 +53,7 @@ jobs:
       - name: install udev
         run: sudo apt-get install -y libudev-dev
       - name: set up go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.go-version }}
       - name: build
@@ -66,7 +66,7 @@ jobs:
       - name: checkout
         uses: actions/checkout@v4
       - name: set up go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.go-version }}
       - name: go test
