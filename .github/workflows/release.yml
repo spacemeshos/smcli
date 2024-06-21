@@ -51,6 +51,6 @@ jobs:
         tar -czf ${{ env.ARTIFACT_NAME }} *
         mv ${{ env.ARTIFACT_NAME }} ..
     - name: Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: ${{ env.ARTIFACT_NAME }}
