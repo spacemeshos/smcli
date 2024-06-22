@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"math/rand"
 	"os"
@@ -17,6 +16,7 @@ import (
 	genvm "github.com/spacemeshos/go-spacemesh/genvm"
 	"github.com/spacemeshos/go-spacemesh/genvm/core"
 	"github.com/spacemeshos/go-spacemesh/genvm/sdk"
+	"github.com/spacemeshos/go-spacemesh/log"
 
 	sdkMultisig "github.com/spacemeshos/go-spacemesh/genvm/sdk/multisig"
 	// sdkVesting "github.com/spacemeshos/go-spacemesh/genvm/sdk/vesting"
@@ -25,6 +25,7 @@ import (
 	templateWallet "github.com/spacemeshos/go-spacemesh/genvm/templates/wallet"
 	"github.com/spacemeshos/go-spacemesh/signing"
 	"github.com/spacemeshos/go-spacemesh/sql"
+	"go.uber.org/zap"
 )
 
 type typeAccount string
@@ -112,14 +113,21 @@ func txToTestVector(
 	txType typeTx,
 	destination, hrp string,
 	m, n uint8,
+	validity bool,
 ) TestVector {
 	validator := vm.Validation(types.NewRawTx(tx))
 	header, err := validator.Parse()
 	if err != nil {
 		logrus.Fatalf("Error parsing transaction idx %d: %v", index, err)
 	}
+
+	// we should be able to validate all txs EXCEPT partially aggregated multisig txs,
+	// which are not valid as standalone txs
 	if !validator.Verify() {
-		logrus.Fatalf("Error validating transaction idx %d", index)
+		if validity {
+			logrus.Fatalf("Error validating supposedly valid transaction idx %d", index)
+		}
+		logrus.Debugf("Expected error parsing partially aggregated transaction idx %d: %v, ignoring", index, err)
 	}
 	return TestVector{
 		Index: index,
@@ -144,6 +152,10 @@ func txToTestVector(
 type TxPair struct {
 	txtype typeTx
 	tx     []byte
+
+	// whether this tx is valid as a standalone tx
+	// partially-aggregated multisig txs are not standalone valid so we don't attempt to validate them!
+	valid bool
 }
 
 // maximum "n" value for multisig
@@ -189,7 +201,11 @@ func generateTestVectors(
 		}
 
 		// we need a VM object for validation and gas cost computation
-		vm := genvm.New(sql.InMemory(), genvm.WithConfig(genvm.Config{GasLimit: math.MaxUint64, GenesisID: genesisID}))
+		vm := genvm.New(
+			sql.InMemory(),
+			genvm.WithConfig(genvm.Config{GasLimit: math.MaxUint64, GenesisID: genesisID}),
+			genvm.WithLogger(log.NewWithLevel("genvm", zap.NewAtomicLevelAt(zap.DebugLevel))),
+		)
 
 		// SIMPLE WALLET (SINGLE SIG)
 		logrus.Debug("TEMPLATE: WALLET")
@@ -207,13 +223,14 @@ func generateTestVectors(
 
 		// need a list, not a map, since order matters here
 		// (self-spawn must come before spend)
+		// simple wallet txs are always valid as standalone
 		txList := []TxPair{
-			{txtype: Spawn, tx: sdkWallet.Spawn(privkeys[0], templateWallet.TemplateAddress, spawnArgsWallet, nonce, opts...)},
-			{txtype: SelfSpawn, tx: sdkWallet.SelfSpawn(privkeys[0], nonce, opts...)},
+			{txtype: Spawn, tx: sdkWallet.Spawn(privkeys[0], templateWallet.TemplateAddress, spawnArgsWallet, nonce, opts...), valid: true},
+			{txtype: SelfSpawn, tx: sdkWallet.SelfSpawn(privkeys[0], nonce, opts...), valid: true},
 			// apply the parsed self spawn tx
 			// this will allow the spend tx to be validated
 			{txtype: Ignore, tx: sdkWallet.SelfSpawn(privkeys[0], nonce, opts...)},
-			{txtype: Spend, tx: sdkWallet.Spend(privkeys[0], destination, amount, nonce, opts...)},
+			{txtype: Spend, tx: sdkWallet.Spend(privkeys[0], destination, amount, nonce, opts...), valid: true},
 		}
 		for _, txPair := range txList {
 			if txPair.txtype == Ignore {
@@ -222,7 +239,7 @@ func generateTestVectors(
 				continue
 			}
 			logrus.Debugf("[%d] Generating test vector for %s %s %s", index, hrp, "wallet", txPair.txtype)
-			testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Wallet, txPair.txtype, destination.String(), hrp, 1, 1)
+			testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Wallet, txPair.txtype, destination.String(), hrp, 1, 1, true)
 			testVectors = append(testVectors, testVector)
 			index++
 		}
@@ -232,14 +249,14 @@ func generateTestVectors(
 		logrus.Debug("TEMPLATE: MULTISIG")
 		for _, n := range []uint8{1, MaxKeys} {
 			for m := uint8(1); m <= n; m++ {
-				logrus.Debugf("MULTISIG: %d of %d", m, n)
 				spawnArgsMultisig := &templateMultisig.SpawnArguments{
 					Required:   m,
-					PublicKeys: pubkeysCore,
+					PublicKeys: pubkeysCore[:n],
 				}
 
 				// principal address depends on the set of pubkeys
 				principal = core.ComputePrincipal(templateMultisig.TemplateAddress, spawnArgsMultisig)
+				logrus.Debugf("MULTISIG: %d of %d, principal: %s", m, n, principal.String())
 
 				// fund the principal account (to allow verification later)
 				vm.ApplyGenesis([]types.Account{{
@@ -249,7 +266,7 @@ func generateTestVectors(
 
 				// multisig operations require m signers per operation
 				spawnAgg := sdkMultisig.Spawn(0, privkeys[0], principal, templateMultisig.TemplateAddress, spawnArgsMultisig, nonce, opts...)
-				selfSpawnAgg := sdkMultisig.SelfSpawn(0, privkeys[0], templateMultisig.TemplateAddress, m, pubkeysEd, nonce, opts...)
+				selfSpawnAgg := sdkMultisig.SelfSpawn(0, privkeys[0], templateMultisig.TemplateAddress, m, pubkeysEd[:n], nonce, opts...)
 				spendAgg := sdkMultisig.Spend(0, privkeys[0], principal, destination, amount, nonce, opts...)
 
 				// add an individual test vector for each signing operation
@@ -261,19 +278,22 @@ func generateTestVectors(
 				txListSelfSpawn := make([]TxPair, m)
 				txListSpend := make([]TxPair, m)
 
-				txListSpawn[0] = TxPair{txtype: Spawn, tx: spawnAgg.Raw()}
-				txListSelfSpawn[0] = TxPair{txtype: SelfSpawn, tx: selfSpawnAgg.Raw()}
-				txListSpend[0] = TxPair{txtype: Spend, tx: spendAgg.Raw()}
+				// multisig txs are valid as standalone only if idx==m-1, i.e., it's the final part
+				txListSpawn[0] = TxPair{txtype: Spawn, tx: spawnAgg.Raw(), valid: m == 1}
+				txListSelfSpawn[0] = TxPair{txtype: SelfSpawn, tx: selfSpawnAgg.Raw(), valid: m == 1}
+				txListSpend[0] = TxPair{txtype: Spend, tx: spendAgg.Raw(), valid: m == 1}
 
 				// now add a test vector for each additional required signature
 				// note: this assumes signer n has the signed n-1 tx
 				for signerIdx := uint8(1); signerIdx < m; signerIdx++ {
 					spawnAgg.Add(*sdkMultisig.Spawn(signerIdx, privkeys[signerIdx], principal, templateMultisig.TemplateAddress, spawnArgsMultisig, nonce, opts...).Part(signerIdx))
-					selfSpawnAgg.Add(*sdkMultisig.SelfSpawn(signerIdx, privkeys[signerIdx], templateMultisig.TemplateAddress, m, pubkeysEd, nonce, opts...).Part(signerIdx))
+					selfSpawnAgg.Add(*sdkMultisig.SelfSpawn(signerIdx, privkeys[signerIdx], templateMultisig.TemplateAddress, m, pubkeysEd[:n], nonce, opts...).Part(signerIdx))
 					spendAgg.Add(*sdkMultisig.Spend(signerIdx, privkeys[signerIdx], principal, destination, amount, nonce, opts...).Part(signerIdx))
-					txListSpawn[signerIdx] = TxPair{txtype: Spawn, tx: spawnAgg.Raw()}
-					txListSelfSpawn[signerIdx] = TxPair{txtype: SelfSpawn, tx: selfSpawnAgg.Raw()}
-					txListSpend[signerIdx] = TxPair{txtype: Spend, tx: spendAgg.Raw()}
+
+					// only the final, fully aggregated tx is valid
+					txListSpawn[signerIdx] = TxPair{txtype: Spawn, tx: spawnAgg.Raw(), valid: signerIdx == m-1}
+					txListSelfSpawn[signerIdx] = TxPair{txtype: SelfSpawn, tx: selfSpawnAgg.Raw(), valid: signerIdx == m-1}
+					txListSpend[signerIdx] = TxPair{txtype: Spend, tx: spendAgg.Raw(), valid: signerIdx == m-1}
 				}
 
 				// assemble the final list of txs in order: spawn, self-spawn, final aggregated self-spawn to apply, spend
@@ -289,7 +309,7 @@ func generateTestVectors(
 						continue
 					}
 					logrus.Debugf("[%d] Generating test vector for %s %s %s %d of %d", index, hrp, "multisig", txPair.txtype, m, n)
-					testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Multisig, txPair.txtype, destination.String(), hrp, m, n)
+					testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Multisig, txPair.txtype, destination.String(), hrp, m, n, txPair.valid)
 					testVectors = append(testVectors, testVector)
 					index++
 				}
