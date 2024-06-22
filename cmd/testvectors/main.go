@@ -95,8 +95,10 @@ func applyTx(tx []byte, vm *genvm.VM) {
 	}
 	skipped, results, err := vm.Apply(genvm.ApplyContext{Layer: types.FirstEffectiveGenesis()}, []types.Transaction{coreTx}, []types.CoinbaseReward{})
 	if len(skipped) != 0 {
-		log.Fatal("Error applying transaction")
-	} else if len(results) != 1 || results[0].Status != types.TransactionSuccess {
+		log.Fatal("Error applying transaction: transaction skipped")
+	} else if len(results) != 1 {
+		log.Fatal("Error applying transaction: unexpected number of results (tx failed)")
+	} else if results[0].Status != types.TransactionSuccess {
 		log.Fatal("Error applying transaction: %v", results[0].Status)
 	} else if err != nil {
 		log.Fatal("Error applying transaction: %v", err)
@@ -198,7 +200,6 @@ func handleMultisig(
 	pubkeysEd []ed25519.PublicKey,
 	privkeys []ed25519.PrivateKey,
 	m, n uint8,
-	nonce uint64,
 ) []TxPair {
 
 	// we also need the separate principal for each signer
@@ -208,7 +209,7 @@ func handleMultisig(
 		principalSigners[i] = core.ComputePrincipal(templateWallet.TemplateAddress, &templateWallet.SpawnArguments{PublicKey: pubkeysCore[i]})
 	}
 
-	log.Debug("MULTISIG: %d of %d, principal: %s", m, n, principalMultisig.String())
+	log.Debug("m-of-n: %d of %d, principal: %s", m, n, principalMultisig.String())
 
 	// fund the principal account (to allow verification later)
 	vm.ApplyGenesis([]types.Account{{
@@ -220,14 +221,12 @@ func handleMultisig(
 	// spawn principal must be signer principal
 	// self spawn principal is the multisig itself
 	// spend principal can be either
-	// nonce must be correct for first spawn operation since we're reusing a signer that has already
-	// had txs applied
 
 	// TODO: figure out why this doesn't work, i.e., why the spawn tx cannot have an individual signer as principal, but rather
 	// must have the multisig as principal
 	// spawnAgg := sdkMultisig.Spawn(0, privkeys[0], principalSigners[0], templateMultisig.TemplateAddress, spawnArgsMultisig, nonce, opts...)
 
-	spawnAgg := sdkMultisig.Spawn(0, privkeys[0], principalMultisig, templateMultisig.TemplateAddress, spawnArgsMultisig, nonce, opts...)
+	spawnAgg := sdkMultisig.Spawn(0, privkeys[0], principalMultisig, templateMultisig.TemplateAddress, spawnArgsMultisig, 0, opts...)
 	selfSpawnAgg := sdkMultisig.SelfSpawn(0, privkeys[0], templateMultisig.TemplateAddress, m, pubkeysEd[:n], 0, opts...)
 	spendAgg := sdkMultisig.Spend(0, privkeys[0], principalMultisig, destination, Amount, 0, opts...)
 
@@ -248,7 +247,7 @@ func handleMultisig(
 	// now add a test vector for each additional required signature
 	// note: this assumes signer n has the signed n-1 tx
 	for signerIdx := uint8(1); signerIdx < m; signerIdx++ {
-		spawnAgg.Add(*sdkMultisig.Spawn(signerIdx, privkeys[signerIdx], principalMultisig, templateMultisig.TemplateAddress, spawnArgsMultisig, nonce, opts...).Part(signerIdx))
+		spawnAgg.Add(*sdkMultisig.Spawn(signerIdx, privkeys[signerIdx], principalMultisig, templateMultisig.TemplateAddress, spawnArgsMultisig, 0, opts...).Part(signerIdx))
 		selfSpawnAgg.Add(*sdkMultisig.SelfSpawn(signerIdx, privkeys[signerIdx], templateMultisig.TemplateAddress, m, pubkeysEd[:n], 0, opts...).Part(signerIdx))
 		spendAgg.Add(*sdkMultisig.Spend(signerIdx, privkeys[signerIdx], principalMultisig, destination, Amount, 0, opts...).Part(signerIdx))
 
@@ -269,12 +268,24 @@ func handleMultisig(
 
 const Amount = uint64(constants.OneSmesh)
 
-func generateTestVectors(
-	pubkeysSigning []signing.PublicKey,
-	pubkeysCore []core.PublicKey,
-	pubkeysEd []ed25519.PublicKey,
-	privkeys []ed25519.PrivateKey,
-) []TestVector {
+func generateKeys(n int) ([]signing.PublicKey, []core.PublicKey, []ed25519.PublicKey, []ed25519.PrivateKey) {
+	// generate the required set of keypairs
+
+	// frustratingly, we need the same list of pubkeys in multiple formats
+	// https://github.com/spacemeshos/go-spacemesh/issues/6061
+	pubkeysSigning := make([]signing.PublicKey, n)
+	pubkeysCore := make([]core.PublicKey, n)
+	pubkeysEd := make([]ed25519.PublicKey, n)
+	privkeys := make([]signing.PrivateKey, n)
+	for i := 0; i < n; i++ {
+		pubkeysEd[i], privkeys[i] = getKey()
+		pubkeysCore[i] = types.BytesToHash(pubkeysEd[i])
+		pubkeysSigning[i] = signing.PublicKey{PublicKey: pubkeysEd[i]}
+	}
+	return pubkeysSigning, pubkeysCore, pubkeysEd, privkeys
+}
+
+func generateTestVectors() []TestVector {
 	// read network configs - needed for genesisID
 	var configMainnet, configTestnet config.GenesisConfig
 	configMainnet = config.MainnetConfig().Genesis
@@ -308,7 +319,6 @@ func generateTestVectors(
 			sdk.WithGenesisID(genesisID),
 			sdk.WithGasPrice(1),
 		}
-		nonce := uint64(0)
 
 		// we need a VM object for validation and gas cost computation
 		vm := genvm.New(
@@ -319,6 +329,10 @@ func generateTestVectors(
 
 		// SIMPLE WALLET (SINGLE SIG)
 		log.Debug("TEMPLATE: WALLET")
+
+		// generate a single key
+		_, pubkeysCore, _, privkeys := generateKeys(1)
+
 		spawnArgsWallet := &templateWallet.SpawnArguments{
 			PublicKey: pubkeysCore[0],
 		}
@@ -335,20 +349,22 @@ func generateTestVectors(
 		// (self-spawn must come before spend)
 		// simple wallet txs are always valid as standalone
 		txList := []TxPair{
-			{txtype: Spawn, tx: sdkWallet.Spawn(privkeys[0], templateWallet.TemplateAddress, spawnArgsWallet, nonce, opts...), valid: true},
-			{txtype: SelfSpawn, tx: sdkWallet.SelfSpawn(privkeys[0], nonce, opts...), valid: true},
+			{txtype: Spawn, tx: sdkWallet.Spawn(privkeys[0], templateWallet.TemplateAddress, spawnArgsWallet, 0, opts...), valid: true},
+			{txtype: SelfSpawn, tx: sdkWallet.SelfSpawn(privkeys[0], 0, opts...), valid: true},
 			// apply the parsed self spawn tx
 			// this will allow the spend tx to be validated
-			{txtype: Ignore, tx: sdkWallet.SelfSpawn(privkeys[0], nonce, opts...)},
-			{txtype: Spend, tx: sdkWallet.Spend(privkeys[0], destination, Amount, nonce, opts...), valid: true},
+			{txtype: Ignore, tx: sdkWallet.SelfSpawn(privkeys[0], 0, opts...)},
+			{txtype: Spend, tx: sdkWallet.Spend(privkeys[0], destination, Amount, 0, opts...), valid: true},
 		}
-		nonce++
 		testVectors = append(testVectors, processTxList(txList, hrp, Wallet, len(testVectors), vm, destination, 1, 1)...)
 
 		// MULTISIG
 		// 1-of-1, 1-of-2, 2-of-2
 		log.Debug("TEMPLATE: MULTISIG")
 		for _, n := range []uint8{1, MaxKeys} {
+			// generate a fresh set of keys
+			pubkeysSigning, pubkeysCore, pubkeysEd, privkeys := generateKeys(int(n))
+
 			for m := uint8(1); m <= n; m++ {
 				spawnArgsMultisig := &templateMultisig.SpawnArguments{
 					Required:   m,
@@ -371,10 +387,8 @@ func generateTestVectors(
 					privkeys,
 					m,
 					n,
-					nonce,
 				)
 				testVectors = append(testVectors, processTxList(multisigTxList, hrp, Multisig, len(testVectors), vm, destination, m, n)...)
-				nonce++
 			}
 		}
 
@@ -384,6 +398,9 @@ func generateTestVectors(
 		// additionally they can drain a vault account.
 		log.Debug("TEMPLATE: VESTING")
 		for _, n := range []uint8{1, MaxKeys} {
+			// generate a fresh set of keys
+			pubkeysSigning, pubkeysCore, pubkeysEd, privkeys := generateKeys(int(n))
+
 			for m := uint8(1); m <= n; m++ {
 				// note: vesting uses multisig spawn arguments
 				spawnArgsMultisig := &templateMultisig.SpawnArguments{
@@ -407,9 +424,7 @@ func generateTestVectors(
 					privkeys,
 					m,
 					n,
-					nonce,
 				)
-				nonce++
 
 				// add drain vault tx
 
@@ -440,22 +455,7 @@ func generateTestVectors(
 }
 
 func main() {
-	// generate the required set of keypairs
-	// do this once and use the same keys for all test vectors
-
-	// frustratingly, we need the same list of pubkeys in multiple formats
-	// https://github.com/spacemeshos/go-spacemesh/issues/6061
-	pubkeysSigning := make([]signing.PublicKey, MaxKeys)
-	pubkeysCore := make([]core.PublicKey, MaxKeys)
-	pubkeysEd := make([]ed25519.PublicKey, MaxKeys)
-	privkeys := make([]signing.PrivateKey, MaxKeys)
-	for i := 0; i < MaxKeys; i++ {
-		pubkeysEd[i], privkeys[i] = getKey()
-		pubkeysCore[i] = types.BytesToHash(pubkeysEd[i])
-		pubkeysSigning[i] = signing.PublicKey{PublicKey: pubkeysEd[i]}
-	}
-
-	testVectors := generateTestVectors(pubkeysSigning, pubkeysCore, pubkeysEd, privkeys)
+	testVectors := generateTestVectors()
 
 	jsonData, err := json.MarshalIndent(testVectors, "", "  ")
 	if err != nil {
