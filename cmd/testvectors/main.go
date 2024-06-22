@@ -42,6 +42,8 @@ const (
 	Spawn     typeTx = "spawn"
 	SelfSpawn        = "self_spawn"
 	Spend            = "spend"
+	// applied to state but not output in tests
+	Ignore = "ignore"
 )
 
 type Output struct {
@@ -76,32 +78,43 @@ func init() {
 // generate a random address for testing
 func generateAddress() types.Address {
 	pub, _ := getKey()
-	return types.GenerateAddress(pub.Bytes())
+	return types.GenerateAddress(pub)
 }
 
-func txToTestVector(tx []byte, vm *genvm.VM, index int, amount, nonce uint64, accountType typeAccount, txType typeTx, destination, hrp string) TestVector {
+func applyTx(tx []byte, vm *genvm.VM) {
 	validator := vm.Validation(types.NewRawTx(tx))
 	header, err := validator.Parse()
-
-	// apply the parsed self spawn tx
-	// this will allow the spend tx to be validated
-	if txType == SelfSpawn {
-		logrus.Debugf("Applying self-spawn tx idx %d for account type %s", index, accountType)
-		coreTx := types.Transaction{
-			TxHeader: header,
-			RawTx:    types.NewRawTx(tx),
-		}
-		skipped, results, err := vm.Apply(genvm.ApplyContext{Layer: types.FirstEffectiveGenesis()}, []types.Transaction{coreTx}, []types.CoinbaseReward{})
-		if len(skipped) != 0 {
-			logrus.Fatalf("Error applying self spawn tx idx %d", index)
-		} else if len(results) != 1 || results[0].Status != types.TransactionSuccess {
-			logrus.Fatalf("Error applying self spawn tx idx %d: %v", index, results[0].Status)
-		} else if err != nil {
-			logrus.Fatalf("Error applying self spawn tx idx %d: %v", index, err)
-		}
-		logrus.Debugf("got result: %v", results[0].TransactionResult)
+	if err != nil {
+		logrus.Fatalf("Error parsing transaction to apply: %v", err)
 	}
+	coreTx := types.Transaction{
+		TxHeader: header,
+		RawTx:    types.NewRawTx(tx),
+	}
+	skipped, results, err := vm.Apply(genvm.ApplyContext{Layer: types.FirstEffectiveGenesis()}, []types.Transaction{coreTx}, []types.CoinbaseReward{})
+	if len(skipped) != 0 {
+		logrus.Fatalf("Error applying transaction")
+	} else if len(results) != 1 || results[0].Status != types.TransactionSuccess {
+		logrus.Fatalf("Error applying transaction: %v", results[0].Status)
+	} else if err != nil {
+		logrus.Fatalf("Error applying transaction: %v", err)
+	}
+	logrus.Debugf("got result: %v", results[0].TransactionResult)
+}
 
+// m, n only used for multisig; ignored for single sig wallet
+func txToTestVector(
+	tx []byte,
+	vm *genvm.VM,
+	index int,
+	amount, nonce uint64,
+	accountType typeAccount,
+	txType typeTx,
+	destination, hrp string,
+	m, n uint8,
+) TestVector {
+	validator := vm.Validation(types.NewRawTx(tx))
+	header, err := validator.Parse()
 	if err != nil {
 		logrus.Fatalf("Error parsing transaction idx %d: %v", index, err)
 	}
@@ -110,7 +123,7 @@ func txToTestVector(tx []byte, vm *genvm.VM, index int, amount, nonce uint64, ac
 	}
 	return TestVector{
 		Index: index,
-		Name:  fmt.Sprintf("%s_%s_%s", hrp, "wallet", txType),
+		Name:  fmt.Sprintf("%s_%s_%s", hrp, accountType, txType),
 		Blob:  types.BytesToHash(tx).String(),
 		Output: Output{
 			// note: not all fields used in all tx types.
@@ -128,11 +141,20 @@ func txToTestVector(tx []byte, vm *genvm.VM, index int, amount, nonce uint64, ac
 	}
 }
 
-func generateTestVectors() []TestVector {
-	// we only need one keypair
-	pub, priv := getKey()
-	pubCore := types.BytesToHash(pub.Bytes())
+type TxPair struct {
+	txtype typeTx
+	tx     []byte
+}
 
+// maximum "n" value for multisig
+const MaxKeys = 2
+
+func generateTestVectors(
+	pubkeysSigning []signing.PublicKey,
+	pubkeysCore []core.PublicKey,
+	pubkeysEd []ed25519.PublicKey,
+	privkeys []ed25519.PrivateKey,
+) []TestVector {
 	// read network configs - needed for genesisID
 	var configMainnet, configTestnet config.GenesisConfig
 	configMainnet = config.MainnetConfig().Genesis
@@ -155,6 +177,7 @@ func generateTestVectors() []TestVector {
 	// note: destination is not used in all tx types
 	destination := generateAddress()
 	for hrp, netconf := range networks {
+		logrus.Debugf("NETWORK: %s", hrp)
 		// hrp is used in address generation
 		types.SetNetworkHRP(hrp)
 
@@ -169,8 +192,9 @@ func generateTestVectors() []TestVector {
 		vm := genvm.New(sql.InMemory(), genvm.WithConfig(genvm.Config{GasLimit: math.MaxUint64, GenesisID: genesisID}))
 
 		// SIMPLE WALLET (SINGLE SIG)
+		logrus.Debug("TEMPLATE: WALLET")
 		spawnArgsWallet := &templateWallet.SpawnArguments{
-			PublicKey: pubCore,
+			PublicKey: pubkeysCore[0],
 		}
 		principal := core.ComputePrincipal(templateWallet.TemplateAddress, spawnArgsWallet)
 
@@ -183,62 +207,89 @@ func generateTestVectors() []TestVector {
 
 		// need a list, not a map, since order matters here
 		// (self-spawn must come before spend)
-		txList := []struct {
-			txtype typeTx
-			tx     []byte
-		}{
-			{txtype: Spawn, tx: sdkWallet.Spawn(priv, templateWallet.TemplateAddress, spawnArgsWallet, nonce, opts...)},
-			{txtype: SelfSpawn, tx: sdkWallet.SelfSpawn(priv, nonce, opts...)},
-			{txtype: Spend, tx: sdkWallet.Spend(priv, destination, amount, nonce, opts...)},
+		txList := []TxPair{
+			{txtype: Spawn, tx: sdkWallet.Spawn(privkeys[0], templateWallet.TemplateAddress, spawnArgsWallet, nonce, opts...)},
+			{txtype: SelfSpawn, tx: sdkWallet.SelfSpawn(privkeys[0], nonce, opts...)},
+			// apply the parsed self spawn tx
+			// this will allow the spend tx to be validated
+			{txtype: Ignore, tx: sdkWallet.SelfSpawn(privkeys[0], nonce, opts...)},
+			{txtype: Spend, tx: sdkWallet.Spend(privkeys[0], destination, amount, nonce, opts...)},
 		}
 		for _, txPair := range txList {
+			if txPair.txtype == Ignore {
+				logrus.Debugf("Applying tx ignored for test vectors for %s %s", hrp, "wallet")
+				applyTx(txPair.tx, vm)
+				continue
+			}
 			logrus.Debugf("[%d] Generating test vector for %s %s %s", index, hrp, "wallet", txPair.txtype)
-			testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Wallet, txPair.txtype, destination.String(), hrp)
+			testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Wallet, txPair.txtype, destination.String(), hrp, 1, 1)
 			testVectors = append(testVectors, testVector)
 			index++
 		}
 
 		// MULTISIG
-		// include 1- and 2- of -1 and -2 (m of n)
-		for _, m := range []uint8{1, 2} {
-			for _, n := range []uint8{1, 2} {
-				// fill in the missing public keys (we already have one)
-				pubKeys := make([]core.PublicKey, n)
-
-				// frustratingly, we need the same list of pubkeys in a different format
-				// https://github.com/spacemeshos/go-spacemesh/issues/6061
-				edPubKeys := make([]ed25519.PublicKey, n)
-
-				pubKeys[0] = pubCore
-				edPubKeys[0] = ed25519.PublicKey(pub.Bytes())
-				if n > 1 {
-					pub2, _ := getKey()
-					pubKeys[1] = core.PublicKey(types.BytesToHash(pub2.Bytes()))
-					edPubKeys[1] = ed25519.PublicKey(pub2.Bytes())
-				}
-
+		// 1-of-1, 1-of-2, 2-of-2
+		logrus.Debug("TEMPLATE: MULTISIG")
+		for _, n := range []uint8{1, MaxKeys} {
+			for m := uint8(1); m <= n; m++ {
+				logrus.Debugf("MULTISIG: %d of %d", m, n)
 				spawnArgsMultisig := &templateMultisig.SpawnArguments{
 					Required:   m,
-					PublicKeys: pubKeys,
+					PublicKeys: pubkeysCore,
 				}
 
+				// principal address depends on the set of pubkeys
 				principal = core.ComputePrincipal(templateMultisig.TemplateAddress, spawnArgsMultisig)
+
+				// fund the principal account (to allow verification later)
 				vm.ApplyGenesis([]types.Account{{
 					Address: principal,
 					Balance: constants.OneSmesh,
 				}})
 
-				txList = []struct {
-					txtype typeTx
-					tx     []byte
-				}{
-					{txtype: Spawn, tx: sdkMultisig.Spawn(0, priv, principal, templateMultisig.TemplateAddress, spawnArgsMultisig, nonce, opts...).Raw()},
-					{txtype: SelfSpawn, tx: sdkMultisig.SelfSpawn(0, priv, templateMultisig.TemplateAddress, m, edPubKeys, nonce, opts...).Raw()},
-					{txtype: Spend, tx: sdkMultisig.Spend(0, priv, principal, destination, amount, nonce, opts...).Raw()},
+				// multisig operations require m signers per operation
+				spawnAgg := sdkMultisig.Spawn(0, privkeys[0], principal, templateMultisig.TemplateAddress, spawnArgsMultisig, nonce, opts...)
+				selfSpawnAgg := sdkMultisig.SelfSpawn(0, privkeys[0], templateMultisig.TemplateAddress, m, pubkeysEd, nonce, opts...)
+				spendAgg := sdkMultisig.Spend(0, privkeys[0], principal, destination, amount, nonce, opts...)
+
+				// add an individual test vector for each signing operation
+				// one list per tx type so we can assemble the final list in order
+				// start with the first operation
+				// three m-length lists plus one additional, final, aggregated self-spawn tx
+				txList = []TxPair{}
+				txListSpawn := make([]TxPair, m)
+				txListSelfSpawn := make([]TxPair, m)
+				txListSpend := make([]TxPair, m)
+
+				txListSpawn[0] = TxPair{txtype: Spawn, tx: spawnAgg.Raw()}
+				txListSelfSpawn[0] = TxPair{txtype: SelfSpawn, tx: selfSpawnAgg.Raw()}
+				txListSpend[0] = TxPair{txtype: Spend, tx: spendAgg.Raw()}
+
+				// now add a test vector for each additional required signature
+				// note: this assumes signer n has the signed n-1 tx
+				for signerIdx := uint8(1); signerIdx < m; signerIdx++ {
+					spawnAgg.Add(*sdkMultisig.Spawn(signerIdx, privkeys[signerIdx], principal, templateMultisig.TemplateAddress, spawnArgsMultisig, nonce, opts...).Part(signerIdx))
+					selfSpawnAgg.Add(*sdkMultisig.SelfSpawn(signerIdx, privkeys[signerIdx], templateMultisig.TemplateAddress, m, pubkeysEd, nonce, opts...).Part(signerIdx))
+					spendAgg.Add(*sdkMultisig.Spend(signerIdx, privkeys[signerIdx], principal, destination, amount, nonce, opts...).Part(signerIdx))
+					txListSpawn[signerIdx] = TxPair{txtype: Spawn, tx: spawnAgg.Raw()}
+					txListSelfSpawn[signerIdx] = TxPair{txtype: SelfSpawn, tx: selfSpawnAgg.Raw()}
+					txListSpend[signerIdx] = TxPair{txtype: Spend, tx: spendAgg.Raw()}
 				}
+
+				// assemble the final list of txs in order: spawn, self-spawn, final aggregated self-spawn to apply, spend
+				txList = append(txList, txListSpawn...)
+				txList = append(txList, txListSelfSpawn...)
+				txList = append(txList, TxPair{txtype: Ignore, tx: selfSpawnAgg.Raw()})
+				txList = append(txList, txListSpend...)
+
 				for _, txPair := range txList {
+					if txPair.txtype == Ignore {
+						logrus.Debugf("Applying tx ignored for test vectors for %s %s", hrp, "multisig")
+						applyTx(txPair.tx, vm)
+						continue
+					}
 					logrus.Debugf("[%d] Generating test vector for %s %s %s %d of %d", index, hrp, "multisig", txPair.txtype, m, n)
-					testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Multisig, txPair.txtype, destination.String(), hrp)
+					testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Multisig, txPair.txtype, destination.String(), hrp, m, n)
 					testVectors = append(testVectors, testVector)
 					index++
 				}
@@ -249,7 +300,22 @@ func generateTestVectors() []TestVector {
 }
 
 func main() {
-	testVectors := generateTestVectors()
+	// generate the required set of keypairs
+	// do this once and use the same keys for all test vectors
+
+	// frustratingly, we need the same list of pubkeys in multiple formats
+	// https://github.com/spacemeshos/go-spacemesh/issues/6061
+	pubkeysSigning := make([]signing.PublicKey, MaxKeys)
+	pubkeysCore := make([]core.PublicKey, MaxKeys)
+	pubkeysEd := make([]ed25519.PublicKey, MaxKeys)
+	privkeys := make([]signing.PrivateKey, MaxKeys)
+	for i := 0; i < MaxKeys; i++ {
+		pubkeysEd[i], privkeys[i] = getKey()
+		pubkeysCore[i] = types.BytesToHash(pubkeysEd[i])
+		pubkeysSigning[i] = signing.PublicKey{PublicKey: pubkeysEd[i]}
+	}
+
+	testVectors := generateTestVectors(pubkeysSigning, pubkeysCore, pubkeysEd, privkeys)
 
 	jsonData, err := json.MarshalIndent(testVectors, "", "  ")
 	if err != nil {
@@ -259,14 +325,15 @@ func main() {
 	fmt.Println(string(jsonData))
 }
 
-func getKey() (pub signing.PublicKey, priv signing.PrivateKey) {
-	// generate a random pubkey and discard the private key
-	edPub, edPriv, err := ed25519.GenerateKey(rand.New(rand.NewSource(rand.Int63())))
+// func getKey() (pub signing.PublicKey, priv signing.PrivateKey) {
+func getKey() (pub ed25519.PublicKey, priv ed25519.PrivateKey) {
+	// generate a random keypair
+	pub, priv, err := ed25519.GenerateKey(rand.New(rand.NewSource(rand.Int63())))
 	if err != nil {
 		log.Fatal("failed to generate ed25519 key")
 	}
 	// pub = *signing.NewPublicKey(edPub)
-	pub = signing.PublicKey{PublicKey: edPub}
-	priv = signing.PrivateKey(edPriv)
+	// pub = signing.PublicKey{PublicKey: edPub}
+	// priv = signing.PrivateKey(edPriv)
 	return
 }
