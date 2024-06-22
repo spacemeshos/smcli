@@ -18,9 +18,10 @@ import (
 	"github.com/spacemeshos/go-spacemesh/log"
 
 	sdkMultisig "github.com/spacemeshos/go-spacemesh/genvm/sdk/multisig"
-	// sdkVesting "github.com/spacemeshos/go-spacemesh/genvm/sdk/vesting"
+	sdkVesting "github.com/spacemeshos/go-spacemesh/genvm/sdk/vesting"
 	sdkWallet "github.com/spacemeshos/go-spacemesh/genvm/sdk/wallet"
 	templateMultisig "github.com/spacemeshos/go-spacemesh/genvm/templates/multisig"
+	templateVesting "github.com/spacemeshos/go-spacemesh/genvm/templates/vesting"
 	templateWallet "github.com/spacemeshos/go-spacemesh/genvm/templates/wallet"
 	"github.com/spacemeshos/go-spacemesh/signing"
 	"github.com/spacemeshos/go-spacemesh/sql"
@@ -31,19 +32,19 @@ type typeAccount string
 
 const (
 	Wallet   typeAccount = "wallet"
-	Multisig             = "multisig"
-	Vault                = "vault"
-	Vesting              = "vesting"
+	Multisig typeAccount = "multisig"
+	Vault    typeAccount = "vault"
+	Vesting  typeAccount = "vesting"
 )
 
 type typeTx string
 
 const (
 	Spawn     typeTx = "spawn"
-	SelfSpawn        = "self_spawn"
-	Spend            = "spend"
+	SelfSpawn typeTx = "self_spawn"
+	Spend     typeTx = "spend"
 	// applied to state but not output in tests
-	Ignore = "ignore"
+	Ignore typeTx = "ignore"
 )
 
 type Output struct {
@@ -160,6 +161,91 @@ type TxPair struct {
 // maximum "n" value for multisig
 const MaxKeys = 2
 
+func handleMultisig(
+	vm *genvm.VM,
+	opts []sdk.Opt,
+	destination types.Address,
+	index int,
+	hrp string,
+	pubkeysSigning []signing.PublicKey,
+	pubkeysCore []core.PublicKey,
+	pubkeysEd []ed25519.PublicKey,
+	privkeys []ed25519.PrivateKey,
+	m, n uint8,
+) []TestVector {
+	spawnArgsMultisig := &templateMultisig.SpawnArguments{
+		Required:   m,
+		PublicKeys: pubkeysCore[:n],
+	}
+
+	// principal address depends on the set of pubkeys
+	principal := core.ComputePrincipal(templateMultisig.TemplateAddress, spawnArgsMultisig)
+	log.Debug("MULTISIG: %d of %d, principal: %s", m, n, principal.String())
+
+	// fund the principal account (to allow verification later)
+	vm.ApplyGenesis([]types.Account{{
+		Address: principal,
+		Balance: constants.OneSmesh,
+	}})
+
+	// multisig operations require m signers per operation
+	spawnAgg := sdkMultisig.Spawn(0, privkeys[0], principal, templateMultisig.TemplateAddress, spawnArgsMultisig, Nonce, opts...)
+	selfSpawnAgg := sdkMultisig.SelfSpawn(0, privkeys[0], templateMultisig.TemplateAddress, m, pubkeysEd[:n], Nonce, opts...)
+	spendAgg := sdkMultisig.Spend(0, privkeys[0], principal, destination, Amount, Nonce, opts...)
+
+	// add an individual test vector for each signing operation
+	// one list per tx type so we can assemble the final list in order
+	// start with the first operation
+	// three m-length lists plus one additional, final, aggregated self-spawn tx
+	txList := []TxPair{}
+	txListSpawn := make([]TxPair, m)
+	txListSelfSpawn := make([]TxPair, m)
+	txListSpend := make([]TxPair, m)
+
+	// multisig txs are valid as standalone only if idx==m-1, i.e., it's the final part
+	txListSpawn[0] = TxPair{txtype: Spawn, tx: spawnAgg.Raw(), valid: m == 1}
+	txListSelfSpawn[0] = TxPair{txtype: SelfSpawn, tx: selfSpawnAgg.Raw(), valid: m == 1}
+	txListSpend[0] = TxPair{txtype: Spend, tx: spendAgg.Raw(), valid: m == 1}
+
+	// now add a test vector for each additional required signature
+	// note: this assumes signer n has the signed n-1 tx
+	for signerIdx := uint8(1); signerIdx < m; signerIdx++ {
+		spawnAgg.Add(*sdkMultisig.Spawn(signerIdx, privkeys[signerIdx], principal, templateMultisig.TemplateAddress, spawnArgsMultisig, Nonce, opts...).Part(signerIdx))
+		selfSpawnAgg.Add(*sdkMultisig.SelfSpawn(signerIdx, privkeys[signerIdx], templateMultisig.TemplateAddress, m, pubkeysEd[:n], Nonce, opts...).Part(signerIdx))
+		spendAgg.Add(*sdkMultisig.Spend(signerIdx, privkeys[signerIdx], principal, destination, Amount, Nonce, opts...).Part(signerIdx))
+
+		// only the final, fully aggregated tx is valid
+		txListSpawn[signerIdx] = TxPair{txtype: Spawn, tx: spawnAgg.Raw(), valid: signerIdx == m-1}
+		txListSelfSpawn[signerIdx] = TxPair{txtype: SelfSpawn, tx: selfSpawnAgg.Raw(), valid: signerIdx == m-1}
+		txListSpend[signerIdx] = TxPair{txtype: Spend, tx: spendAgg.Raw(), valid: signerIdx == m-1}
+	}
+
+	// assemble the final list of txs in order: spawn, self-spawn, final aggregated self-spawn to apply, spend
+	txList = append(txList, txListSpawn...)
+	txList = append(txList, txListSelfSpawn...)
+	txList = append(txList, TxPair{txtype: Ignore, tx: selfSpawnAgg.Raw()})
+	txList = append(txList, txListSpend...)
+
+	testVectors := []TestVector{}
+	for _, txPair := range txList {
+		if txPair.txtype == Ignore {
+			log.Debug("Applying tx ignored for test vectors for %s %s", hrp, "multisig")
+			applyTx(txPair.tx, vm)
+			continue
+		}
+		log.Debug("[%d] Generating test vector for %s %s %s %d of %d", index, hrp, "multisig", txPair.txtype, m, n)
+		testVector := txToTestVector(txPair.tx, vm, index, Amount, Nonce, Multisig, txPair.txtype, destination.String(), hrp, m, n, txPair.valid)
+		testVectors = append(testVectors, testVector)
+		index++
+	}
+	return testVectors
+}
+
+const (
+	Nonce  = uint64(0)
+	Amount = uint64(constants.OneSmesh)
+)
+
 func generateTestVectors(
 	pubkeysSigning []signing.PublicKey,
 	pubkeysCore []core.PublicKey,
@@ -180,10 +266,8 @@ func generateTestVectors(
 		"stest": configTestnet,
 	}
 
-	testVectors := make([]TestVector, 0)
+	testVectors := []TestVector{}
 	index := 0
-	nonce := uint64(0)
-	amount := uint64(constants.OneSmesh)
 	// just use a single, random destination address
 	// note: destination is not used in all tx types
 	destination := generateAddress()
@@ -224,12 +308,12 @@ func generateTestVectors(
 		// (self-spawn must come before spend)
 		// simple wallet txs are always valid as standalone
 		txList := []TxPair{
-			{txtype: Spawn, tx: sdkWallet.Spawn(privkeys[0], templateWallet.TemplateAddress, spawnArgsWallet, nonce, opts...), valid: true},
-			{txtype: SelfSpawn, tx: sdkWallet.SelfSpawn(privkeys[0], nonce, opts...), valid: true},
+			{txtype: Spawn, tx: sdkWallet.Spawn(privkeys[0], templateWallet.TemplateAddress, spawnArgsWallet, Nonce, opts...), valid: true},
+			{txtype: SelfSpawn, tx: sdkWallet.SelfSpawn(privkeys[0], Nonce, opts...), valid: true},
 			// apply the parsed self spawn tx
 			// this will allow the spend tx to be validated
-			{txtype: Ignore, tx: sdkWallet.SelfSpawn(privkeys[0], nonce, opts...)},
-			{txtype: Spend, tx: sdkWallet.Spend(privkeys[0], destination, amount, nonce, opts...), valid: true},
+			{txtype: Ignore, tx: sdkWallet.SelfSpawn(privkeys[0], Nonce, opts...)},
+			{txtype: Spend, tx: sdkWallet.Spend(privkeys[0], destination, Amount, Nonce, opts...), valid: true},
 		}
 		for _, txPair := range txList {
 			if txPair.txtype == Ignore {
@@ -238,7 +322,7 @@ func generateTestVectors(
 				continue
 			}
 			log.Debug("[%d] Generating test vector for %s %s %s", index, hrp, "wallet", txPair.txtype)
-			testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Wallet, txPair.txtype, destination.String(), hrp, 1, 1, true)
+			testVector := txToTestVector(txPair.tx, vm, index, Amount, Nonce, Wallet, txPair.txtype, destination.String(), hrp, 1, 1, true)
 			testVectors = append(testVectors, testVector)
 			index++
 		}
@@ -248,70 +332,21 @@ func generateTestVectors(
 		log.Debug("TEMPLATE: MULTISIG")
 		for _, n := range []uint8{1, MaxKeys} {
 			for m := uint8(1); m <= n; m++ {
-				spawnArgsMultisig := &templateMultisig.SpawnArguments{
-					Required:   m,
-					PublicKeys: pubkeysCore[:n],
-				}
-
-				// principal address depends on the set of pubkeys
-				principal = core.ComputePrincipal(templateMultisig.TemplateAddress, spawnArgsMultisig)
-				log.Debug("MULTISIG: %d of %d, principal: %s", m, n, principal.String())
-
-				// fund the principal account (to allow verification later)
-				vm.ApplyGenesis([]types.Account{{
-					Address: principal,
-					Balance: constants.OneSmesh,
-				}})
-
-				// multisig operations require m signers per operation
-				spawnAgg := sdkMultisig.Spawn(0, privkeys[0], principal, templateMultisig.TemplateAddress, spawnArgsMultisig, nonce, opts...)
-				selfSpawnAgg := sdkMultisig.SelfSpawn(0, privkeys[0], templateMultisig.TemplateAddress, m, pubkeysEd[:n], nonce, opts...)
-				spendAgg := sdkMultisig.Spend(0, privkeys[0], principal, destination, amount, nonce, opts...)
-
-				// add an individual test vector for each signing operation
-				// one list per tx type so we can assemble the final list in order
-				// start with the first operation
-				// three m-length lists plus one additional, final, aggregated self-spawn tx
-				txList = []TxPair{}
-				txListSpawn := make([]TxPair, m)
-				txListSelfSpawn := make([]TxPair, m)
-				txListSpend := make([]TxPair, m)
-
-				// multisig txs are valid as standalone only if idx==m-1, i.e., it's the final part
-				txListSpawn[0] = TxPair{txtype: Spawn, tx: spawnAgg.Raw(), valid: m == 1}
-				txListSelfSpawn[0] = TxPair{txtype: SelfSpawn, tx: selfSpawnAgg.Raw(), valid: m == 1}
-				txListSpend[0] = TxPair{txtype: Spend, tx: spendAgg.Raw(), valid: m == 1}
-
-				// now add a test vector for each additional required signature
-				// note: this assumes signer n has the signed n-1 tx
-				for signerIdx := uint8(1); signerIdx < m; signerIdx++ {
-					spawnAgg.Add(*sdkMultisig.Spawn(signerIdx, privkeys[signerIdx], principal, templateMultisig.TemplateAddress, spawnArgsMultisig, nonce, opts...).Part(signerIdx))
-					selfSpawnAgg.Add(*sdkMultisig.SelfSpawn(signerIdx, privkeys[signerIdx], templateMultisig.TemplateAddress, m, pubkeysEd[:n], nonce, opts...).Part(signerIdx))
-					spendAgg.Add(*sdkMultisig.Spend(signerIdx, privkeys[signerIdx], principal, destination, amount, nonce, opts...).Part(signerIdx))
-
-					// only the final, fully aggregated tx is valid
-					txListSpawn[signerIdx] = TxPair{txtype: Spawn, tx: spawnAgg.Raw(), valid: signerIdx == m-1}
-					txListSelfSpawn[signerIdx] = TxPair{txtype: SelfSpawn, tx: selfSpawnAgg.Raw(), valid: signerIdx == m-1}
-					txListSpend[signerIdx] = TxPair{txtype: Spend, tx: spendAgg.Raw(), valid: signerIdx == m-1}
-				}
-
-				// assemble the final list of txs in order: spawn, self-spawn, final aggregated self-spawn to apply, spend
-				txList = append(txList, txListSpawn...)
-				txList = append(txList, txListSelfSpawn...)
-				txList = append(txList, TxPair{txtype: Ignore, tx: selfSpawnAgg.Raw()})
-				txList = append(txList, txListSpend...)
-
-				for _, txPair := range txList {
-					if txPair.txtype == Ignore {
-						log.Debug("Applying tx ignored for test vectors for %s %s", hrp, "multisig")
-						applyTx(txPair.tx, vm)
-						continue
-					}
-					log.Debug("[%d] Generating test vector for %s %s %s %d of %d", index, hrp, "multisig", txPair.txtype, m, n)
-					testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Multisig, txPair.txtype, destination.String(), hrp, m, n, txPair.valid)
-					testVectors = append(testVectors, testVector)
-					index++
-				}
+				multisigVectors := handleMultisig(
+					vm,
+					opts,
+					destination,
+					index,
+					hrp,
+					pubkeysSigning,
+					pubkeysCore,
+					pubkeysEd,
+					privkeys,
+					m,
+					n,
+				)
+				testVectors = append(testVectors, multisigVectors...)
+				index += len(multisigVectors)
 			}
 		}
 	}
