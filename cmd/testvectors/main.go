@@ -22,6 +22,7 @@ import (
 	sdkWallet "github.com/spacemeshos/go-spacemesh/genvm/sdk/wallet"
 	templateMultisig "github.com/spacemeshos/go-spacemesh/genvm/templates/multisig"
 	templateVault "github.com/spacemeshos/go-spacemesh/genvm/templates/vault"
+	templateVesting "github.com/spacemeshos/go-spacemesh/genvm/templates/vesting"
 	templateWallet "github.com/spacemeshos/go-spacemesh/genvm/templates/wallet"
 	"github.com/spacemeshos/go-spacemesh/signing"
 	"github.com/spacemeshos/go-spacemesh/sql"
@@ -193,6 +194,7 @@ func handleMultisig(
 	opts []sdk.Opt,
 	destination types.Address,
 	hrp string,
+	templateAddress types.Address,
 	principalMultisig types.Address,
 	spawnArgsMultisig *templateMultisig.SpawnArguments,
 	pubkeysSigning []signing.PublicKey,
@@ -226,8 +228,8 @@ func handleMultisig(
 	// must have the multisig as principal
 	// spawnAgg := sdkMultisig.Spawn(0, privkeys[0], principalSigners[0], templateMultisig.TemplateAddress, spawnArgsMultisig, nonce, opts...)
 
-	spawnAgg := sdkMultisig.Spawn(0, privkeys[0], principalMultisig, templateMultisig.TemplateAddress, spawnArgsMultisig, 0, opts...)
-	selfSpawnAgg := sdkMultisig.SelfSpawn(0, privkeys[0], templateMultisig.TemplateAddress, m, pubkeysEd[:n], 0, opts...)
+	spawnAgg := sdkMultisig.Spawn(0, privkeys[0], principalMultisig, templateAddress, spawnArgsMultisig, 0, opts...)
+	selfSpawnAgg := sdkMultisig.SelfSpawn(0, privkeys[0], templateAddress, m, pubkeysEd[:n], 0, opts...)
 	spendAgg := sdkMultisig.Spend(0, privkeys[0], principalMultisig, destination, Amount, 0, opts...)
 
 	// add an individual test vector for each signing operation
@@ -247,8 +249,8 @@ func handleMultisig(
 	// now add a test vector for each additional required signature
 	// note: this assumes signer n has the signed n-1 tx
 	for signerIdx := uint8(1); signerIdx < m; signerIdx++ {
-		spawnAgg.Add(*sdkMultisig.Spawn(signerIdx, privkeys[signerIdx], principalMultisig, templateMultisig.TemplateAddress, spawnArgsMultisig, 0, opts...).Part(signerIdx))
-		selfSpawnAgg.Add(*sdkMultisig.SelfSpawn(signerIdx, privkeys[signerIdx], templateMultisig.TemplateAddress, m, pubkeysEd[:n], 0, opts...).Part(signerIdx))
+		spawnAgg.Add(*sdkMultisig.Spawn(signerIdx, privkeys[signerIdx], principalMultisig, templateAddress, spawnArgsMultisig, 0, opts...).Part(signerIdx))
+		selfSpawnAgg.Add(*sdkMultisig.SelfSpawn(signerIdx, privkeys[signerIdx], templateAddress, m, pubkeysEd[:n], 0, opts...).Part(signerIdx))
 		spendAgg.Add(*sdkMultisig.Spend(signerIdx, privkeys[signerIdx], principalMultisig, destination, Amount, 0, opts...).Part(signerIdx))
 
 		// only the final, fully aggregated tx is valid
@@ -379,6 +381,7 @@ func generateTestVectors() []TestVector {
 					opts,
 					destination,
 					hrp,
+					templateMultisig.TemplateAddress,
 					principalMultisig,
 					spawnArgsMultisig,
 					pubkeysSigning,
@@ -409,13 +412,14 @@ func generateTestVectors() []TestVector {
 				}
 
 				// calculate multisig principalMultisig address, which depends on the set of pubkeys
-				principalMultisig := core.ComputePrincipal(templateMultisig.TemplateAddress, spawnArgsMultisig)
+				principalMultisig := core.ComputePrincipal(templateVesting.TemplateAddress, spawnArgsMultisig)
 
 				vestingTxList := handleMultisig(
 					vm,
 					opts,
 					destination,
 					hrp,
+					templateVesting.TemplateAddress,
 					principalMultisig,
 					spawnArgsMultisig,
 					pubkeysSigning,
