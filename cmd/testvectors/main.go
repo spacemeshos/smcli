@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"github.com/oasisprotocol/curve25519-voi/primitives/ed25519"
-	"github.com/sirupsen/logrus"
 	"github.com/spacemeshos/economics/constants"
 	"github.com/spacemeshos/go-spacemesh/common/types"
 	"github.com/spacemeshos/go-spacemesh/config"
@@ -68,12 +67,12 @@ type TestVector struct {
 
 func init() {
 	// Set log level based on an environment variable
+	level := zap.DebugLevel
+	// level := zap.InfoLevel
 	if os.Getenv("DEBUG") != "" {
-		logrus.SetLevel(logrus.DebugLevel)
-	} else {
-		// logrus.SetLevel(logrus.InfoLevel)
-		logrus.SetLevel(logrus.DebugLevel)
+		level = zap.DebugLevel
 	}
+	log.SetLogger(log.NewWithLevel("testvectors", zap.NewAtomicLevelAt(level)))
 }
 
 // generate a random address for testing
@@ -86,7 +85,7 @@ func applyTx(tx []byte, vm *genvm.VM) {
 	validator := vm.Validation(types.NewRawTx(tx))
 	header, err := validator.Parse()
 	if err != nil {
-		logrus.Fatalf("Error parsing transaction to apply: %v", err)
+		log.Fatal("Error parsing transaction to apply: %v", err)
 	}
 	coreTx := types.Transaction{
 		TxHeader: header,
@@ -94,13 +93,13 @@ func applyTx(tx []byte, vm *genvm.VM) {
 	}
 	skipped, results, err := vm.Apply(genvm.ApplyContext{Layer: types.FirstEffectiveGenesis()}, []types.Transaction{coreTx}, []types.CoinbaseReward{})
 	if len(skipped) != 0 {
-		logrus.Fatalf("Error applying transaction")
+		log.Fatal("Error applying transaction")
 	} else if len(results) != 1 || results[0].Status != types.TransactionSuccess {
-		logrus.Fatalf("Error applying transaction: %v", results[0].Status)
+		log.Fatal("Error applying transaction: %v", results[0].Status)
 	} else if err != nil {
-		logrus.Fatalf("Error applying transaction: %v", err)
+		log.Fatal("Error applying transaction: %v", err)
 	}
-	logrus.Debugf("got result: %v", results[0].TransactionResult)
+	log.Debug("got result: %v", results[0].TransactionResult)
 }
 
 // m, n only used for multisig; ignored for single sig wallet
@@ -118,16 +117,16 @@ func txToTestVector(
 	validator := vm.Validation(types.NewRawTx(tx))
 	header, err := validator.Parse()
 	if err != nil {
-		logrus.Fatalf("Error parsing transaction idx %d: %v", index, err)
+		log.Fatal("Error parsing transaction idx %d: %v", index, err)
 	}
 
 	// we should be able to validate all txs EXCEPT partially aggregated multisig txs,
 	// which are not valid as standalone txs
 	if !validator.Verify() {
 		if validity {
-			logrus.Fatalf("Error validating supposedly valid transaction idx %d", index)
+			log.Fatal("Error validating supposedly valid transaction idx %d", index)
 		}
-		logrus.Debugf("Expected error parsing partially aggregated transaction idx %d: %v, ignoring", index, err)
+		log.Debug("Expected error parsing partially aggregated transaction idx %d: %v, ignoring", index, err)
 	}
 	return TestVector{
 		Index: index,
@@ -171,7 +170,7 @@ func generateTestVectors(
 	var configMainnet, configTestnet config.GenesisConfig
 	configMainnet = config.MainnetConfig().Genesis
 	if testnet, err := presets.Get("testnet"); err != nil {
-		logrus.Fatalf("Error getting testnet config: %v", err)
+		log.Fatal("Error getting testnet config: %v", err)
 	} else {
 		configTestnet = testnet.Genesis
 	}
@@ -189,7 +188,7 @@ func generateTestVectors(
 	// note: destination is not used in all tx types
 	destination := generateAddress()
 	for hrp, netconf := range networks {
-		logrus.Debugf("NETWORK: %s", hrp)
+		log.Debug("NETWORK: %s", hrp)
 		// hrp is used in address generation
 		types.SetNetworkHRP(hrp)
 
@@ -208,7 +207,7 @@ func generateTestVectors(
 		)
 
 		// SIMPLE WALLET (SINGLE SIG)
-		logrus.Debug("TEMPLATE: WALLET")
+		log.Debug("TEMPLATE: WALLET")
 		spawnArgsWallet := &templateWallet.SpawnArguments{
 			PublicKey: pubkeysCore[0],
 		}
@@ -234,11 +233,11 @@ func generateTestVectors(
 		}
 		for _, txPair := range txList {
 			if txPair.txtype == Ignore {
-				logrus.Debugf("Applying tx ignored for test vectors for %s %s", hrp, "wallet")
+				log.Debug("Applying tx ignored for test vectors for %s %s", hrp, "wallet")
 				applyTx(txPair.tx, vm)
 				continue
 			}
-			logrus.Debugf("[%d] Generating test vector for %s %s %s", index, hrp, "wallet", txPair.txtype)
+			log.Debug("[%d] Generating test vector for %s %s %s", index, hrp, "wallet", txPair.txtype)
 			testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Wallet, txPair.txtype, destination.String(), hrp, 1, 1, true)
 			testVectors = append(testVectors, testVector)
 			index++
@@ -246,7 +245,7 @@ func generateTestVectors(
 
 		// MULTISIG
 		// 1-of-1, 1-of-2, 2-of-2
-		logrus.Debug("TEMPLATE: MULTISIG")
+		log.Debug("TEMPLATE: MULTISIG")
 		for _, n := range []uint8{1, MaxKeys} {
 			for m := uint8(1); m <= n; m++ {
 				spawnArgsMultisig := &templateMultisig.SpawnArguments{
@@ -256,7 +255,7 @@ func generateTestVectors(
 
 				// principal address depends on the set of pubkeys
 				principal = core.ComputePrincipal(templateMultisig.TemplateAddress, spawnArgsMultisig)
-				logrus.Debugf("MULTISIG: %d of %d, principal: %s", m, n, principal.String())
+				log.Debug("MULTISIG: %d of %d, principal: %s", m, n, principal.String())
 
 				// fund the principal account (to allow verification later)
 				vm.ApplyGenesis([]types.Account{{
@@ -304,11 +303,11 @@ func generateTestVectors(
 
 				for _, txPair := range txList {
 					if txPair.txtype == Ignore {
-						logrus.Debugf("Applying tx ignored for test vectors for %s %s", hrp, "multisig")
+						log.Debug("Applying tx ignored for test vectors for %s %s", hrp, "multisig")
 						applyTx(txPair.tx, vm)
 						continue
 					}
-					logrus.Debugf("[%d] Generating test vector for %s %s %s %d of %d", index, hrp, "multisig", txPair.txtype, m, n)
+					log.Debug("[%d] Generating test vector for %s %s %s %d of %d", index, hrp, "multisig", txPair.txtype, m, n)
 					testVector := txToTestVector(txPair.tx, vm, index, amount, nonce, Multisig, txPair.txtype, destination.String(), hrp, m, n, txPair.valid)
 					testVectors = append(testVectors, testVector)
 					index++
@@ -339,7 +338,7 @@ func main() {
 
 	jsonData, err := json.MarshalIndent(testVectors, "", "  ")
 	if err != nil {
-		logrus.Fatalf("Error marshalling test vectors: %v", err)
+		log.Fatal("Error marshalling test vectors: %v", err)
 	}
 
 	fmt.Println(string(jsonData))
