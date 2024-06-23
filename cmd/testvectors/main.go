@@ -79,24 +79,24 @@ func (tv TestVector) MarshalJSON() ([]byte, error) {
 		output = append(output, fmt.Sprintf("%d | %s", index, s))
 		index++
 	}
-	addString(fmt.Sprintf("%s : %s", tv.typeAccount, tv.typeTx))
-	addString(fmt.Sprintf("Principal : %s", tv.principal))
-	addString(fmt.Sprintf("Max Gas : %d", tv.gasMax))
 
 	// add account-based details
 	switch tv.typeAccount {
-	// nothing special to add for regular wallet
 	case Vesting:
 		fallthrough
 	case Multisig:
-		addString(fmt.Sprintf("M-of-N : %d of %d", tv.m, tv.n))
+		addString(fmt.Sprintf("%s %d-of-%d : %s", tv.typeAccount, tv.m, tv.n, tv.typeTx))
 		// part is zero-indexed
 		addString(fmt.Sprintf("Part : %d of %d", tv.part+1, tv.m))
+	default:
+		addString(fmt.Sprintf("%s : %s", tv.typeAccount, tv.typeTx))
 	}
+	addString(fmt.Sprintf("Principal : %s", tv.principal))
+	addString(fmt.Sprintf("Max Gas : %d", tv.gasMax))
 
 	// add tx-based details
 	switch tv.typeTx {
-	// nothing special to add for spawn
+	// nothing to add for spawn
 	case Drain:
 		addString(fmt.Sprintf("Vault : %s", tv.vault))
 		fallthrough
@@ -112,8 +112,8 @@ func (tv TestVector) MarshalJSON() ([]byte, error) {
 		outputExpert = append(outputExpert, fmt.Sprintf("%d | %s", index, s))
 		index++
 	}
+	addStringExpert(fmt.Sprintf("Chain : %s", tv.hrp))
 	addStringExpert(fmt.Sprintf("Template : %s", tv.template))
-	addStringExpert(fmt.Sprintf("Chain HRP : %s", tv.hrp))
 	addStringExpert(fmt.Sprintf("Nonce : %d", tv.nonce))
 	addStringExpert(fmt.Sprintf("Method : %d", tv.method))
 
@@ -202,7 +202,7 @@ func txToTestVector(
 		name = fmt.Sprintf("%s_%s_%s", hrp, accountType, txType)
 	} else {
 		// for multisig, we need to include more information
-		name = fmt.Sprintf("%s_%s_%d_of_%d_%s_idx_%d", hrp, accountType, m, n, txType, part)
+		name = fmt.Sprintf("%s_%s_%d_of_%d_%s_part_%d", hrp, accountType, m, n, txType, part+1)
 	}
 
 	return TestVector{
@@ -406,6 +406,12 @@ func generateKeys(n int) ([]signing.PublicKey, []core.PublicKey, []ed25519.Publi
 }
 
 func generateTestVectors() []TestVector {
+	// Set log level based on an environment variable
+	level := zap.WarnLevel
+	if os.Getenv("DEBUG") != "" {
+		level = zap.DebugLevel
+	}
+
 	// read network configs - needed for genesisID
 	var configMainnet, configTestnet config.GenesisConfig
 	configMainnet = config.MainnetConfig().Genesis
@@ -444,7 +450,7 @@ func generateTestVectors() []TestVector {
 		vm := genvm.New(
 			sql.InMemory(),
 			genvm.WithConfig(genvm.Config{GasLimit: math.MaxUint64, GenesisID: genesisID}),
-			genvm.WithLogger(log.NewWithLevel("genvm", zap.NewAtomicLevelAt(zap.WarnLevel))),
+			genvm.WithLogger(log.NewWithLevel("genvm", zap.NewAtomicLevelAt(level))),
 		)
 
 		// SIMPLE WALLET (SINGLE SIG)
@@ -481,7 +487,7 @@ func generateTestVectors() []TestVector {
 		// MULTISIG
 		// 1-of-1, 1-of-2, 2-of-2
 		log.Debug("TEMPLATE: MULTISIG")
-		for _, n := range []uint8{1, MaxKeys} {
+		for n := uint8(1); n <= MaxKeys; n++ {
 			// generate a fresh set of keys
 			pubkeysSigning, pubkeysCore, pubkeysEd, privkeys := generateKeys(int(n))
 
@@ -518,7 +524,7 @@ func generateTestVectors() []TestVector {
 		// vesting accounts are a superset of multisig. they can do everything a multisig can do, but
 		// additionally they can drain a vault account.
 		log.Debug("TEMPLATE: VESTING")
-		for _, n := range []uint8{1, MaxKeys} {
+		for n := uint8(1); n <= MaxKeys; n++ {
 			// generate a fresh set of keys
 			pubkeysSigning, pubkeysCore, pubkeysEd, privkeys := generateKeys(int(n))
 
@@ -594,8 +600,5 @@ func getKey() (pub ed25519.PublicKey, priv ed25519.PrivateKey) {
 	if err != nil {
 		log.Fatal("failed to generate ed25519 key")
 	}
-	// pub = *signing.NewPublicKey(edPub)
-	// pub = signing.PublicKey{PublicKey: edPub}
-	// priv = signing.PrivateKey(edPriv)
 	return
 }
