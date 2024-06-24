@@ -298,7 +298,6 @@ func handleMultisig(
 	templateAddress types.Address,
 	principalMultisig types.Address,
 	spawnArgsMultisig *templateMultisig.SpawnArguments,
-	pubkeysSigning []signing.PublicKey,
 	pubkeysCore []core.PublicKey,
 	pubkeysEd []ed25519.PublicKey,
 	privkeys []ed25519.PrivateKey,
@@ -388,21 +387,19 @@ func handleMultisig(
 
 const Amount = uint64(constants.OneSmesh)
 
-func generateKeys(n int) ([]signing.PublicKey, []core.PublicKey, []ed25519.PublicKey, []ed25519.PrivateKey) {
+func generateKeys(n int) ([]core.PublicKey, []ed25519.PublicKey, []ed25519.PrivateKey) {
 	// generate the required set of keypairs
 
 	// frustratingly, we need the same list of pubkeys in multiple formats
 	// https://github.com/spacemeshos/go-spacemesh/issues/6061
-	pubkeysSigning := make([]signing.PublicKey, n)
 	pubkeysCore := make([]core.PublicKey, n)
 	pubkeysEd := make([]ed25519.PublicKey, n)
 	privkeys := make([]signing.PrivateKey, n)
 	for i := 0; i < n; i++ {
 		pubkeysEd[i], privkeys[i] = getKey()
 		pubkeysCore[i] = types.BytesToHash(pubkeysEd[i])
-		pubkeysSigning[i] = signing.PublicKey{PublicKey: pubkeysEd[i]}
 	}
-	return pubkeysSigning, pubkeysCore, pubkeysEd, privkeys
+	return pubkeysCore, pubkeysEd, privkeys
 }
 
 func generateTestVectors() []TestVector {
@@ -457,7 +454,7 @@ func generateTestVectors() []TestVector {
 		log.Debug("TEMPLATE: WALLET")
 
 		// generate a single key
-		_, pubkeysCore, _, privkeys := generateKeys(1)
+		pubkeysCore, _, privkeys := generateKeys(1)
 
 		spawnArgsWallet := &templateWallet.SpawnArguments{
 			PublicKey: pubkeysCore[0],
@@ -489,7 +486,7 @@ func generateTestVectors() []TestVector {
 		log.Debug("TEMPLATE: MULTISIG")
 		for n := uint8(1); n <= MaxKeys; n++ {
 			// generate a fresh set of keys
-			pubkeysSigning, pubkeysCore, pubkeysEd, privkeys := generateKeys(int(n))
+			pubkeysCore, pubkeysEd, privkeys := generateKeys(int(n))
 
 			for m := uint8(1); m <= n; m++ {
 				spawnArgsMultisig := &templateMultisig.SpawnArguments{
@@ -508,7 +505,6 @@ func generateTestVectors() []TestVector {
 					templateMultisig.TemplateAddress,
 					principalMultisig,
 					spawnArgsMultisig,
-					pubkeysSigning,
 					pubkeysCore,
 					pubkeysEd,
 					privkeys,
@@ -526,7 +522,7 @@ func generateTestVectors() []TestVector {
 		log.Debug("TEMPLATE: VESTING")
 		for n := uint8(1); n <= MaxKeys; n++ {
 			// generate a fresh set of keys
-			pubkeysSigning, pubkeysCore, pubkeysEd, privkeys := generateKeys(int(n))
+			pubkeysCore, pubkeysEd, privkeys := generateKeys(int(n))
 
 			for m := uint8(1); m <= n; m++ {
 				// note: vesting uses multisig spawn arguments
@@ -546,7 +542,6 @@ func generateTestVectors() []TestVector {
 					templateVesting.TemplateAddress,
 					principalMultisig,
 					spawnArgsMultisig,
-					pubkeysSigning,
 					pubkeysCore,
 					pubkeysEd,
 					privkeys,
