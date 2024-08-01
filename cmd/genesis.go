@@ -68,32 +68,38 @@ var verifyCmd = &cobra.Command{
 		cobra.CheckErr(err)
 		amount *= constants.OneSmesh
 
-		// calculate keys
-		vestingArgs := &multisig.SpawnArguments{
-			Required:   m,
-			PublicKeys: keys,
-		}
-		if int(vestingArgs.Required) > len(vestingArgs.PublicKeys) {
-			log.Fatalf("requires more signatures (%d) than public keys (%d) in the wallet\n",
-				vestingArgs.Required,
-				len(vestingArgs.PublicKeys),
-			)
-		}
-		vestingAddress := core.ComputePrincipal(vesting.TemplateAddress, vestingArgs)
-		vaultArgs := &vault.SpawnArguments{
-			Owner:               vestingAddress,
-			TotalAmount:         amount,
-			InitialUnlockAmount: amount / 4,
-			VestingStart:        types.LayerID(constants.VestStart),
-			VestingEnd:          types.LayerID(constants.VestEnd),
-		}
-		vaultAddress := core.ComputePrincipal(vault.TemplateAddress, vaultArgs)
+		vestingAddress, vaultAddress := generateAddresses(m, keys, amount)
 
 		// output addresses
 		fmt.Printf("Vesting address: %s\nVault address: %s\n",
 			vestingAddress.String(),
 			vaultAddress.String())
 	},
+}
+
+// generateAddresses generates vesting and vault addresses based on the provided parameters.
+func generateAddresses(m uint8, keys []core.PublicKey, amount uint64) (core.Address, core.Address) {
+	vestingArgs := &multisig.SpawnArguments{
+		Required:   m,
+		PublicKeys: keys,
+	}
+	if int(vestingArgs.Required) > len(vestingArgs.PublicKeys) {
+		log.Fatalf("requires more signatures (%d) than public keys (%d) in the wallet\n",
+			vestingArgs.Required,
+			len(vestingArgs.PublicKeys),
+		)
+	}
+	vestingAddress := core.ComputePrincipal(vesting.TemplateAddress, vestingArgs)
+	vaultArgs := &vault.SpawnArguments{
+		Owner:               vestingAddress,
+		TotalAmount:         amount,
+		InitialUnlockAmount: amount / 4,
+		VestingStart:        types.LayerID(constants.VestStart),
+		VestingEnd:          types.LayerID(constants.VestEnd),
+	}
+	vaultAddress := core.ComputePrincipal(vault.TemplateAddress, vaultArgs)
+
+	return vestingAddress, vaultAddress
 }
 
 func init() {
