@@ -81,9 +81,10 @@ var verifyCmd = &cobra.Command{
 }
 
 var processCSVCmd = &cobra.Command{
-	Use:   "csv",
-	Short: "Process a CSV file with account definitions (name, amount, key1, key2, key3, key4, key5, required_signatures)",
-	Args:  cobra.MaximumNArgs(1),
+	Use: "csv",
+	Short: "Process a CSV file with account definitions " +
+		"(name, amount, key1, key2, key3, key4, key5, required_signatures)",
+	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		csvFilePath, _ := cmd.Flags().GetString("file")
 		if csvFilePath == "" {
@@ -141,7 +142,7 @@ var processCSVCmd = &cobra.Command{
 				}
 				keyBytes, err := hex.DecodeString(keyStr)
 				if err != nil || len(keyBytes) != ed25519.PublicKeySize {
-					log.Fatalf("Error: key %s for  %s on line %s is unreadable", keyStr, name, i)
+					log.Fatalf("Error: key %s for  %s on line %d is unreadable", keyStr, name, i)
 				}
 				var pubKey core.PublicKey
 				copy(pubKey[:], keyBytes)
@@ -176,7 +177,11 @@ var processCSVCmd = &cobra.Command{
 }
 
 // generateAddresses generates vesting and vault addresses based on the provided parameters.
-func generateAddresses(requiredSignatures uint8, publicKeys []core.PublicKey, amount uint64) (core.Address, core.Address) {
+func generateAddresses(
+	requiredSignatures uint8,
+	publicKeys []core.PublicKey,
+	amount uint64,
+) (core.Address, core.Address) {
 	vestingArgs := &multisig.SpawnArguments{
 		Required:   requiredSignatures,
 		PublicKeys: publicKeys,
@@ -203,6 +208,7 @@ func generateAddresses(requiredSignatures uint8, publicKeys []core.PublicKey, am
 func init() {
 	rootCmd.AddCommand(genesisCmd)
 	genesisCmd.AddCommand(verifyCmd)
-	processCSVCmd.Flags().StringP("file", "f", "", "Path to a CSV file with headings: name, amount, key1, key2, key3, key4, key5, required_signatures")
+	processCSVCmd.Flags().StringP("file", "f", "",
+		"Path to a CSV file with headings: name, amount, key1, key2, key3, key4, key5, required_signatures")
 	genesisCmd.AddCommand(processCSVCmd)
 }
