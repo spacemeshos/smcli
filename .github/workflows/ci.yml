@@ -26,8 +26,6 @@ jobs:
           make install
           make test-fmt
           make test-tidy
-      - name: staticcheck
-        run: make staticcheck
 
   lint:
     runs-on: ubuntu-latest
