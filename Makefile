@@ -13,6 +13,9 @@ CGO_LDFLAGS := $(LINKLIBS) $(RPATH)
 STATICLDFLAGS := -L$(UNZIP_DEST) -led25519_bip32 -lspacemesh_remote_wallet
 EXTRACT = tar -xzf
 
+GOLANGCI_LINT_VERSION := v1.59.0
+GOTESTSUM_VERSION := v1.12.0
+
 # Detect operating system
 ifeq ($(OS),Windows_NT)
   SYSTEM := windows
@@ -96,9 +99,8 @@ $(DOWNLOAD_DEST):
 .PHONY: install
 install:
 	go mod download
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s v1.57.0
-	go install gotest.tools/gotestsum@v1.11.0
-	go install honnef.co/go/tools/cmd/staticcheck@v0.4.7
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s $(GOLANGCI_LINT_VERSION)
+	go install gotest.tools/gotestsum@$(GOTESTSUM_VERSION)
 
 .PHONY: tidy
 tidy:
@@ -156,13 +158,6 @@ lint-github-action: $(UNZIP_DEST)
 	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	./bin/golangci-lint run --config .golangci.yml --out-format=github-actions
-
-.PHONY: staticcheck
-staticcheck: $(UNZIP_DEST)
-	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
-	LD_LIBRARY_PATH=$(REAL_DEST) \
-	staticcheck ./...
 
 clean:
 	rm -rf $(UNZIP_DEST)
