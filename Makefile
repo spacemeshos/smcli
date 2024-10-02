@@ -13,7 +13,7 @@ CGO_LDFLAGS := $(LINKLIBS) $(RPATH)
 STATICLDFLAGS := -L$(UNZIP_DEST) -led25519_bip32 -lspacemesh_remote_wallet
 EXTRACT = tar -xzf
 
-GOLANGCI_LINT_VERSION := v1.59.0
+GOLANGCI_LINT_VERSION := v1.61.0
 GOTESTSUM_VERSION := v1.12.0
 
 # Detect operating system
@@ -151,13 +151,6 @@ lint-fix: $(UNZIP_DEST)
 	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
 	LD_LIBRARY_PATH=$(REAL_DEST) \
 	./bin/golangci-lint run --config .golangci.yml --fix
-
-.PHONY: lint-github-action
-lint-github-action: $(UNZIP_DEST)
-	CGO_CFLAGS="-I$(REAL_DEST)" \
-	CGO_LDFLAGS="$(CGO_LDFLAGS)" \
-	LD_LIBRARY_PATH=$(REAL_DEST) \
-	./bin/golangci-lint run --config .golangci.yml --out-format=github-actions
 
 clean:
 	rm -rf $(UNZIP_DEST)

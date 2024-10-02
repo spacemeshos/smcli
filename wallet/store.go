@@ -2,6 +2,7 @@ package wallet
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
@@ -234,7 +235,7 @@ func (k *WalletKey) Export(file io.Writer, w *Wallet) error {
 				Iterations int                  `json:"iterations"`
 			}{
 				DKLen:      Pbkdf2Dklen,
-				Hash:       "SHA-256",
+				Hash:       crypto.SHA256.String(),
 				Salt:       k.salt,
 				Iterations: Pbkdf2Iterations,
 			},
