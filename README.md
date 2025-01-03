@@ -1,3 +1,9 @@
+> [!WARNING]
+> Please note that the format of the wallet used by smcli is NOT compatible with the web wallet. It is, however, compatible with the Smapp wallet format.
+> Additionally, please note that the mentioned Ledger integration in smcli was a Proof of Concept that later evolved into an official Spacemesh Ledger app.
+> We plan to support all the recent features in smcli at a later phase.
+
+
 # smcli: Spacemesh Command-line Interface Tool
 
 smcli is a simple command line tool that you can use to manage wallet files (in the future it may be expanded with
