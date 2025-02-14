@@ -6,7 +6,7 @@ require (
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/jedib0t/go-pretty/v6 v6.6.6
 	github.com/spacemeshos/economics v0.1.4
-	github.com/spacemeshos/go-spacemesh v1.7.13
+	github.com/spacemeshos/go-spacemesh v1.7.14
 	github.com/spacemeshos/smkeys v1.0.4
 	github.com/stretchr/testify v1.10.0
 )
