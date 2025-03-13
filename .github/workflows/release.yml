@@ -1,8 +1,5 @@
 name: Build and Release
 
-env:
-  go-version: "1.23"
-
 on:
   release:
     types: [created]
@@ -35,7 +32,8 @@ jobs:
     - name: Set up go
       uses: actions/setup-go@v5
       with:
-        go-version: ${{ env.go-version }}
+        check-latest: true
+        go-version-file: "go.mod"
     - name: Install required packages
       # only run on GH-hosted runner; self-hosted runner already has these
       if: ${{ matrix.name == 'linux-amd64' || matrix.name == 'linux-arm64' }}

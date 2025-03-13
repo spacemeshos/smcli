@@ -1,8 +1,5 @@
 name: CI
 
-env:
-  go-version: "1.23"
-
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the main branch
 on:
@@ -20,7 +17,8 @@ jobs:
       - name: set up go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.go-version }}
+          check-latest: true
+          go-version-file: "go.mod"
       - name: fmt, tidy
         run: |
           make install
@@ -36,7 +34,8 @@ jobs:
       - name: set up go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.go-version }}
+          check-latest: true
+          go-version-file: "go.mod"
       - name: lint
         run: |
           make install
@@ -53,7 +52,8 @@ jobs:
       - name: set up go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.go-version }}
+          check-latest: true
+          go-version-file: "go.mod"
       - name: build
         run: make build
 
@@ -66,6 +66,7 @@ jobs:
       - name: set up go
         uses: actions/setup-go@v5
         with:
-          go-version: ${{ env.go-version }}
+          check-latest: true
+          go-version-file: "go.mod"
       - name: go test
         run: make test
