@@ -6,7 +6,7 @@ require (
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/jedib0t/go-pretty/v6 v6.6.7
 	github.com/spacemeshos/economics v0.1.4
-	github.com/spacemeshos/go-spacemesh v1.8.0
+	github.com/spacemeshos/go-spacemesh v1.8.1
 	github.com/spacemeshos/smkeys v1.0.4
 	github.com/stretchr/testify v1.10.0
 )
@@ -42,7 +42,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.21.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.62.0 // indirect
+	github.com/prometheus/common v0.63.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
