@@ -11,8 +11,6 @@ require (
 	github.com/stretchr/testify v1.10.0
 )
 
-require github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
-
 require (
 	github.com/anacrolix/chansync v0.3.0 // indirect
 	github.com/anacrolix/missinggo v1.2.1 // indirect
@@ -25,6 +23,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/go-llsqlite/crawshaw v0.5.5 // indirect
+	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/password v0.1.3
