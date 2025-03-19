@@ -9,7 +9,7 @@ on:
 
 jobs:
   quicktests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 2
     steps:
       - name: checkout
@@ -26,7 +26,7 @@ jobs:
           make test-tidy
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 2
     steps:
       - name: checkout
@@ -42,7 +42,7 @@ jobs:
           make lint
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 2
     steps:
       - name: checkout
@@ -58,7 +58,7 @@ jobs:
         run: make build
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 2
     steps:
       - name: checkout

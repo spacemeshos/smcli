@@ -12,7 +12,7 @@ jobs:
         include:
           - image: macos-latest
             name: macos-amd64
-          - image: ubuntu-latest
+          - image: ubuntu-22.04
             name: linux-amd64
           - image: windows-latest
             name: windows-amd64
