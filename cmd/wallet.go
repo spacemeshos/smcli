@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"crypto"
+	"crypto/ed25519"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -41,6 +44,30 @@ var (
 	// hrp is the human-readable network identifier used in Spacemesh network addresses.
 	hrp string
 )
+
+func openWallet(walletFn string) (*wallet.Wallet, error) {
+	// make sure the file exists
+	f, err := os.Open(walletFn)
+	cobra.CheckErr(err)
+	defer f.Close()
+
+	// get the password
+	fmt.Print("Enter wallet password: ")
+	password, err := password.Read(os.Stdin)
+	fmt.Println()
+	if err != nil {
+		return nil, err
+	}
+
+	// attempt to read it
+	wk := wallet.NewKey(wallet.WithPasswordOnly([]byte(password)))
+	w, err := wk.Open(f, debug)
+	if err != nil {
+		return nil, err
+	}
+
+	return w, nil
+}
 
 // walletCmd represents the wallet command.
 var walletCmd = &cobra.Command{
@@ -153,20 +180,7 @@ only child keys).`,
 	Run: func(cmd *cobra.Command, args []string) {
 		walletFn := args[0]
 
-		// make sure the file exists
-		f, err := os.Open(walletFn)
-		cobra.CheckErr(err)
-		defer f.Close()
-
-		// get the password
-		fmt.Print("Enter wallet password: ")
-		password, err := password.Read(os.Stdin)
-		fmt.Println()
-		cobra.CheckErr(err)
-
-		// attempt to read it
-		wk := wallet.NewKey(wallet.WithPasswordOnly([]byte(password)))
-		w, err := wk.Open(f, debug)
+		w, err := openWallet(walletFn)
 		cobra.CheckErr(err)
 
 		widthEnforcer := func(col string, maxLen int) string {
@@ -287,10 +301,45 @@ only child keys).`,
 	},
 }
 
+var signCmd = &cobra.Command{
+	Use:   "sign [wallet file] [message]",
+	Short: "Signs a message using a wallet's first child key",
+	Args:  cobra.ExactArgs(2),
+	Run: func(cmd *cobra.Command, args []string) {
+		walletFn := args[0]
+		message := args[1]
+
+		w, err := openWallet(walletFn)
+		cobra.CheckErr(err)
+
+		// Sign message using child account 0.
+		child0 := w.Secrets.Accounts[0] // TODO: flag to select child
+		sk0 := ed25519.PrivateKey(child0.Private)
+		sig, err := sk0.Sign(nil, []byte(message), crypto.Hash(0))
+		cobra.CheckErr(err)
+
+		// Output signed message in a JSON format compatible with smapp's signing feature.
+		type signedMessage struct {
+			Text      string `json:"text"`
+			Signature string `json:"signature"`
+			PublicKey string `json:"publicKey"`
+		}
+		out := signedMessage{
+			Text:      message,
+			Signature: "0x" + hex.EncodeToString(sig),
+			PublicKey: "0x" + hex.EncodeToString(child0.Public),
+		}
+		enc := json.NewEncoder(os.Stdout)
+		enc.SetIndent("", "  ")
+		enc.Encode(out)
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(walletCmd)
 	walletCmd.AddCommand(createCmd)
 	walletCmd.AddCommand(readCmd)
+	walletCmd.AddCommand(signCmd)
 	readCmd.Flags().BoolVarP(&printPrivate, "private", "p", false, "Print private keys")
 	readCmd.Flags().BoolVarP(&printFull, "full", "f", false, "Print full keys (no abbreviation)")
 	readCmd.Flags().BoolVar(&printBase58, "base58", false, "Print keys in base58 (rather than hex)")
