@@ -8,7 +8,7 @@ require (
 	github.com/spacemeshos/economics v0.1.4
 	github.com/spacemeshos/go-spacemesh v1.8.3
 	github.com/spacemeshos/smkeys v1.0.4
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 )
 
 require (
