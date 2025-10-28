@@ -4,7 +4,7 @@ go 1.24.1
 
 require (
 	github.com/btcsuite/btcutil v1.0.2
-	github.com/jedib0t/go-pretty/v6 v6.6.7
+	github.com/jedib0t/go-pretty/v6 v6.6.9
 	github.com/spacemeshos/economics v0.1.4
 	github.com/spacemeshos/go-spacemesh v1.8.3
 	github.com/spacemeshos/smkeys v1.0.4
